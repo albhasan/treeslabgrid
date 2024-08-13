@@ -1,2 +1,8 @@
 ^treeslabgrid\.Rproj$
 ^\.Rproj\.user$
+
+tags
+
+^LICENSE\.md$
+^\.github$
+^README\.Rmd$
