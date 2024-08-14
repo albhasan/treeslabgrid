@@ -1,4 +1,21 @@
-aggregate_geom_categ <- function(categ, data_sf_ls, grid, grid_id, funs) {
+#' Aggregate geometries by category
+#'
+#' @description
+#' Helper function called from `aggregate_geom`.
+#'
+#' @param categ a character(1). Name of a category in the elements of `data_sf_ls`.
+#' @param data_sf_ls a list of sf objects. The data in this list is meant to be
+#'   aggregated using the given `grid`.
+#' @param grid an sf object (polygons). Grid used to aggregate data.
+#' @param grid_id a character(1). Name of a column in `grid` that identifies
+#'   each cell in `grid`.
+#' @param funs a character. Name of aggregation functions.
+#' @param ... parameters passed to funs.
+#'
+#' @return a list of data frames with the results of the aggrgation of the
+#'   spatial attributes of the data in `data_sf_ls` using `grid`.
+#'
+aggregate_geom_categ <- function(categ, data_sf_ls, grid, grid_id, funs, ...) {
 
     stopifnot("`data_sf_ls` must have names!" = !is.null(names(data_sf_ls)))
     stopifnot("`categ` not found in `data_sf_ls`" = 
@@ -56,7 +73,8 @@ aggregate_geom_categ <- function(categ, data_sf_ls, grid, grid_id, funs) {
             x  = dg_df[cnames],
             by = dg_df[grid_id],
             FUN = f,
-            na.rm = TRUE
+            # NOTE: Comment the ellipsis when debugging.
+            ... = ...
         )
         names(data_df) <- vapply(names(data_df),
             FUN = function(n, f){
@@ -71,16 +89,26 @@ aggregate_geom_categ <- function(categ, data_sf_ls, grid, grid_id, funs) {
 
 }
 
-aggregate_geom <- function(x, by, grid, grid_id, funs) {
 
-    # NOTE: This function tries to estimate geometric properties (length, area,
-    #       etc.) when x is the result of an intersection and contains 
-    #       multi-xx geometries or geometry collections. The idea is to ensure
-    #       the properties are estimated including the simple objects inside
-    #       the collections. I can't say for sure if st_length & st_area take
-    #       into account simple geometries inside collections during 
-    #       calculations. One problem with st_cast is that transforms
-    #       linestrings into points instead of failing the cast.
+
+#' Aggregate vector data using a grid
+#'
+#' @description
+#' This function estimates the geometric properties (number, length, and area)
+#' resulting from the intersection of the given vector data and a grid.
+#'
+#' @param x an sf object.
+#' @param by a character(1). A column name in `x`.
+#' @param grid an sf object (polygon). A grid used for aggregating `x`.
+#' @param grid_id a character(1). A column name in `grid` with identifiers for
+#'   each cell in `grid`.
+#' @param funs a character. Name of funcions for aggregating the data in `x`
+#'   that intersects with each cell in `grid`.
+#' @param ... additional parameters of `funs`.
+#'
+#' @return `grid` with additional attributes.
+#'
+aggregate_geom <- function(x, by, grid, grid_id, funs, ...) {
 
     stopifnot("`grid_id` should be a character!" = 
             all(is.character(grid_id), length(grid_id) == 1))
@@ -107,7 +135,9 @@ aggregate_geom <- function(x, by, grid, grid_id, funs) {
         data_sf_ls = data_sf_ls,
         grid = grid,
         grid_id = grid_id,
-        funs = funs
+        funs = funs,
+        # NOTE: Comment the ellipsis when debugging.
+        ... = ...
     )
 
     # Merge inner and then then outer lists.
@@ -127,6 +157,22 @@ aggregate_geom <- function(x, by, grid, grid_id, funs) {
 
 
 
+#' Aggregate vector data
+#'
+#' Aggregate vector data (points, lines, polygons) and their attributes using
+#' simple statistics, a grid, and the data categories.
+#'
+#' @param x an sf object.
+#' @param by a character(1). A column name in `x` with a category for each row.
+#' @param grid and sf object (polygon). A grid used to aggregate `x`.
+#' @param grid_id a character(1). A column name in `grid` with an unique
+#'   identifier for each row.
+#' @param funs a character. Functions names used to aggregate the data in `x`
+#'  corresponding to each cell in `grid`.
+#' @param ... additional parameters passed to funs.
+#'
+#' @export
+#'
 aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
 
     stopifnot("`funs` should be a character!" = all(is.character(funs)))
@@ -155,8 +201,8 @@ aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
                 x = data_sf,
                 by = grid,
                 FUN = f,
-                # TODO: Remove this comment!
-                #... = ...,
+                # NOTE: Commnet the ellipsis when debugging!
+                ... = ...,
                 do_union = TRUE,
                 simplify = TRUE,
                 join = sf::st_intersects
@@ -191,7 +237,9 @@ aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
         by = by,
         grid = grid,
         grid_id = grid_id,
-        funs = funs
+        funs = funs,
+        # NOTE: Commnet the ellipsis when debugging!
+        ... = ...
     )
 
     # Column bind spatial grid to aggregated data.

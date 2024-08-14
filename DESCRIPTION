@@ -1,6 +1,6 @@
 Package: treeslabgrid
 Title: Create Grids and Use Them to Aggregate Data
-Version: 0.0.0.9001
+Version: 0.0.0.9002
 Authors@R: 
     person("Alber", "Sánchez", , "alber.ipia@inpe.br", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-7966-2880"))
