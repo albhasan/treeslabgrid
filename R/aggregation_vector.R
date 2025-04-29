@@ -83,7 +83,8 @@ aggregate_geom_categ <- function(categ, data_sf_ls, grid, grid_id, funs, ...) {
             }, FUN.VALUE = character(1), f = f )
         return(data_df)
     }, dg_df = dg_df, cnames = cnames, grid_id = grid_id)
-    names(funs_ls) <- funs
+    if (is.character(funs))
+        names(funs_ls) <- funs
 
     return(funs_ls)
 
@@ -170,6 +171,8 @@ aggregate_geom <- function(x, by, grid, grid_id, funs, ...) {
 #' @param funs a character. Functions names used to aggregate the data in `x`
 #'  corresponding to each cell in `grid`.
 #' @param ... additional parameters passed to funs.
+#'
+#' @return `grid` with additional columns.
 #'
 #' @export
 #'
