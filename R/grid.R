@@ -30,7 +30,7 @@
 #' @examples
 #'
 #' # Make a 5x5 grid covering a polygon.
-#' pol <- sf::st_sfc(sf::st_polygon(list(cbind(c(0, 3, 3, 0, 0), 
+#' pol <- sf::st_sfc(sf::st_polygon(list(cbind(c(0, 3, 3, 0, 0),
 #'                                             c(0, 0, 3, 3, 0)))),
 #'                   crs = 4326)
 #' make_grid(pol, cellsize = 1, n = 5)
@@ -43,90 +43,93 @@
 #' @export
 make_grid <- function(x, n,
                       cellsize = c(diff(sf::st_bbox(x)[c(1, 3)]),
-                                   diff(sf::st_bbox(x)[c(2, 4)]))/n,
+                                   diff(sf::st_bbox(x)[c(2, 4)])) / n,
                       id_col = "id",
-                      add_row_col = FALSE, 
-                      add_centroids = FALSE, 
+                      add_row_col = FALSE,
+                      add_centroids = FALSE,
                       add_area = FALSE,
                       drop_area_units = FALSE) {
 
-    stopifnot("Invalid n" = all(n > 0))
-    stopifnot("Invalid n" = length(n) %in% 1:2)
-    stopifnot("Invalid add_row_col Expected logical(1) or character(2)" = 
-        all(
-            (is.logical(add_row_col) & length(add_row_col) == 1) | 
-            (is.character(add_row_col)) & length(add_row_col == 2)
-        )
+  stopifnot("Invalid n" = all(n > 0))
+  stopifnot("Invalid n" = length(n) %in% 1:2)
+  stopifnot("Invalid add_row_col Expected logical(1) or character(2)" =
+      all(
+        (is.logical(add_row_col) & length(add_row_col) == 1) |
+          (is.character(add_row_col)) & length(add_row_col == 2)
+      )
+  )
+  stopifnot("Invalid add_centroids. Expected logical(1) or character(2)" =
+      all(
+        (is.logical(add_centroids) & length(add_centroids) == 1) |
+          (is.character(add_centroids)) & length(add_centroids == 2)
+      )
+  )
+
+  if (inherits(x, what = "SpatVector"))
+    x <- sf::st_as_sf(x)
+
+  if (inherits(x, what = "SpatRaster")) {
+    xy_mat <- matrix(as.vector(terra::ext(x)), ncol = 2, byrow = FALSE)
+    xy_line <- sf::st_linestring(xy_mat, dim = "XY")
+    x <- sf::st_sf(sf::st_sfc(xy_line, crs = terra::crs(x)))
+  }
+
+  if (is.na(sf::st_crs(x)))
+    stop("CRS is missing!")
+
+  if (min(cellsize) != max(cellsize))
+    warning("The grid's cells aren't squares!")
+
+  grid <- sf::st_make_grid(
+    x,
+    cellsize = cellsize,
+    n = n,
+    what = "polygons",
+    square = TRUE,
+    flat_topped = FALSE
+  )
+
+  # Handle the id column.
+  data_df <- data.frame(seq_along(grid))
+  colnames(data_df) <- id_col
+
+  # Handle the row and column columns.
+  rc_df <- expand.grid(grid_col = 1:n[1], grid_row = seq_along(n))
+  if (all(is.logical(add_row_col), add_row_col))
+    data_df <- cbind(data_df, rc_df)
+  if (is.character(add_row_col)) {
+    colnames(rc_df) <- c(add_row_col[2], add_row_col[1])
+    data_df <- cbind(data_df, rc_df)
+  }
+
+  # Handle the geometry column.
+  data_df["geometry"] <- list(grid)
+  data_sf <- sf::st_sf(data_df)
+
+  # Handle the centroids' columns.
+  if (all(is.logical(add_centroids), add_centroids))
+    data_sf <- add_centroids(data_sf)
+  if (is.character(add_centroids))
+    data_sf <- add_centroids(data_sf, col_names = add_centroids)
+
+  # Handle the area column.
+  if (all(is.logical(add_area), add_area))
+    data_sf <- add_area(data_sf)
+  if (is.character(add_area))
+    data_sf <- add_area(
+      x = data_sf,
+      col_name = add_area,
+      drop_units = drop_area_units
     )
-    stopifnot("Invalid add_centroids. Expected logical(1) or character(2)" = 
-        all(
-            (is.logical(add_centroids) & length(add_centroids) == 1) | 
-            (is.character(add_centroids)) & length(add_centroids == 2)
-        )
-    )
 
-    if (inherits(x, what = "SpatVector"))
-        x <- sf::st_as_sf(x)
-
-    if (inherits(x, what = "SpatRaster")) {
-        xy_mat <- matrix(as.vector(terra::ext(x)), ncol = 2, byrow = FALSE)
-        xy_line <- sf::st_linestring(xy_mat, dim = "XY")
-        x <- sf::st_sf(sf::st_sfc( xy_line, crs = terra::crs(x)))
-    }
-
-    if (is.na(sf::st_crs(x)))
-        stop("CRS is missing!")
-
-    if (min(cellsize) != max(cellsize))
-        warning("The grid's cells aren't squares!")
-
-    grid <- sf::st_make_grid(
-        x,
-        cellsize = cellsize,
-        n = n,
-        what = "polygons",
-        square = TRUE,
-        flat_topped = FALSE
-    )
-
-    # Handle the id column.
-    data_df <- data.frame(1:length(grid))
-    colnames(data_df) <- id_col
-
-    # Handle the row and column columns.
-    rc_df <- expand.grid(grid_col = 1:n[1], grid_row = 1:n[length(n)])
-    if (all(is.logical(add_row_col), add_row_col))
-        data_df <- cbind(data_df, rc_df)
-    if (is.character(add_row_col)) {
-        colnames(rc_df) <- c(add_row_col[2], add_row_col[1])
-        data_df <- cbind(data_df, rc_df)
-    }
-
-    # Handle the geometry column.
-    data_df["geometry"] <- list(grid)
-    data_sf <- sf::st_sf(data_df)
-
-    # Handle the centroids' columns.
-    if (all(is.logical(add_centroids), add_centroids))
-        data_sf <- add_centroids(data_sf)
-    if (is.character(add_centroids))
-        data_sf <- add_centroids(data_sf, col_names = add_centroids)
-
-    # Handle the area column.
-    if (all(is.logical(add_area), add_area))
-        data_sf <- add_area(data_sf)
-    if (is.character(add_area))
-        data_sf <- add_area(data_sf, col_name = add_area,
-                            drop_units = drop_area_units)
-
-    return(data_sf)
+  return(data_sf)
 
 }
 
 #' @rdname make_grid
-#' 
+#'
 #' @description
-#' `make_grid_min_max_cells` returns a grid using the minimum & maximum 
+#' `make_grid_min_max_cells` returns a grid using the minimum & maximum
 #' coordinates, and the number of cells in the grid.
 #'
 #' @param xy_min,xy_max A pair of numeric vectors with the minimum and maximum
@@ -135,44 +138,44 @@ make_grid <- function(x, n,
 #'
 #' @examples
 #'
-#' # Make a grid using mininum and maximum coordinates and the number of grid 
+#' # Make a grid using mininum and maximum coordinates and the number of grid
 #' # cells.
 #' make_grid_min_max_cells(
 #'     xy_min = c(-180, -90),
 #'     xy_max = c(180, 90),
 #'     n = c(14, 7),
 #'     crs = 4326
-#' ) 
+#' )
 #'
 #' @export
 #'
-make_grid_min_max_cells <- function(xy_min, xy_max, n, crs = 4326, 
-                                    id_col = "id", add_row_col = FALSE, 
-                                    add_centroids = FALSE, add_area = FALSE, 
+make_grid_min_max_cells <- function(xy_min, xy_max, n, crs = 4326,
+                                    id_col = "id", add_row_col = FALSE,
+                                    add_centroids = FALSE, add_area = FALSE,
                                     drop_area_units = FALSE) {
 
-    stopifnot("Invalid xy_min. A numeric is expected." = all(
-        is.numeric(xy_min),
-        length(xy_min) %in% 1:2
-    ))
-    stopifnot("Invalid xy_max. A numeric is expected." = all(
-        is.numeric(xy_max),
-        length(xy_max) %in% 1:2
-    ))
+  stopifnot("Invalid xy_min. A numeric is expected." = all(
+    is.numeric(xy_min),
+    length(xy_min) %in% 1:2
+  ))
+  stopifnot("Invalid xy_max. A numeric is expected." = all(
+    is.numeric(xy_max),
+    length(xy_max) %in% 1:2
+  ))
 
-    xy_mat <- matrix(c(xy_min, xy_max), ncol = 2, byrow = TRUE)
-    xy_line <- sf::st_linestring(xy_mat, dim = "XY")
-    x <- sf::st_sf(sf::st_sfc( xy_line, crs = crs))
+  xy_mat <- matrix(c(xy_min, xy_max), ncol = 2, byrow = TRUE)
+  xy_line <- sf::st_linestring(xy_mat, dim = "XY")
+  x <- sf::st_sf(sf::st_sfc(xy_line, crs = crs))
 
-    return(make_grid(
-        x, 
-        n = n,
-        id_col = id_col,
-        add_row_col = add_row_col,
-        add_centroids = add_centroids,
-        add_area = add_area,
-        drop_area_units = drop_area_units
-    ))
+  return(make_grid(
+    x,
+    n = n,
+    id_col = id_col,
+    add_row_col = add_row_col,
+    add_centroids = add_centroids,
+    add_area = add_area,
+    drop_area_units = drop_area_units
+  ))
 
 }
 
