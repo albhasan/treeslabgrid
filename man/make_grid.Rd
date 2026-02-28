@@ -31,7 +31,7 @@ make_grid_min_max_cells(
 )
 
 make_grid_origin_dist(
-  xy_min,
+  xy_origin,
   n,
   cell_size,
   crs,
@@ -54,7 +54,7 @@ make_grid_origin_res(
 \arguments{
 \item{x}{An sf or terra object.}
 
-\item{n}{integer of lenght 1 or 2. Number of cells (columns, rows).}
+\item{n}{integer. Number of cells (columns, rows).}
 
 \item{cellsize}{numeric of length 1 or 2 (width, length). It defaults to the
 width and heigth of the bounding box of the given object divided by the
@@ -82,10 +82,10 @@ coordiantes of the grid.}
 
 \item{crs}{Numeric or character representing a Coordinate Reference System.}
 
+\item{xy_origin}{A numeric(2) representing an XY point.}
+
 \item{cell_size}{A numeric of length 1 or 2. The width and heigth o a cell.
 The units are those of the \code{crs}.}
-
-\item{xy_origin}{A numeric(2) representing an XY point.}
 }
 \value{
 An \code{sf} object with polygons.
@@ -109,9 +109,13 @@ the origin and will fit as many cells as possible in the area.
 \examples{
 
 # Make a 5x5 grid covering a polygon.
-pol <- sf::st_sfc(sf::st_polygon(list(cbind(c(0, 3, 3, 0, 0), 
-                                            c(0, 0, 3, 3, 0)))),
-                  crs = 4326)
+pol <- sf::st_sfc(
+  sf::st_polygon(list(cbind(
+    c(0, 3, 3, 0, 0),
+    c(0, 0, 3, 3, 0)
+  ))),
+  crs = 4326
+)
 make_grid(pol, cellsize = 1, n = 5)
 
 
@@ -120,31 +124,31 @@ r <- terra::rast(matrix(1:25, nrow = 5, ncol = 5), crs = "EPSG:4326")
 make_grid(r, cellsize = 1, n = c(10, 5))
 
 
-# Make a grid using mininum and maximum coordinates and the number of grid 
+# Make a grid using mininum and maximum coordinates and the number of grid
 # cells.
 make_grid_min_max_cells(
-    xy_min = c(-180, -90),
-    xy_max = c(180, 90),
-    n = c(14, 7),
-    crs = 4326
-) 
+  xy_min = c(-180, -90),
+  xy_max = c(180, 90),
+  n = c(14, 7),
+  crs = 4326
+)
 
 
 # Make a rectangular grid using square cells of 25 kilometers.
 make_grid_origin_dist(
-    xy_min = c(-74, 4),
-    n = c(14, 7),
-    cell_size = 25000,
-    crs = 3116
-) 
+  xy_origin = c(-74, 4),
+  n = c(14, 7),
+  cell_size = 25000,
+  crs = 3116
+)
 
 
 # Make a rectangular grid using square cells of 25 kilometers.
 make_grid_origin_res(
-    xy_origin = c(-74.2, 4.4),
-    xy_min = c(-78, -3),
-    xy_max = c(-70, 5),
-    cell_size = 0.5
+  xy_origin = c(-74.2, 4.4),
+  xy_min = c(-78, -3),
+  xy_max = c(-70, 5),
+  cell_size = 0.5
 )
 
 }

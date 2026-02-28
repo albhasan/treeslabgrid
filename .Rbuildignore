@@ -6,3 +6,5 @@ tags
 ^LICENSE\.md$
 ^\.github$
 ^README\.Rmd$
+^doc$
+^Meta$

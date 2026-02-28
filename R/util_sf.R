@@ -25,7 +25,7 @@ get_geom_colname <- function(x) {
 #'
 #' @return the given sf object with additional columns.
 #'
-add_centroids <- function(x, col_names = c("X", "Y")) {
+add_centroids_coords <- function(x, col_names = c("X", "Y")) {
   stopifnot(
     "An sf object was expected!" =
       inherits(x, what = "sf")

@@ -22,7 +22,7 @@ test_that("aggregate_raster works with sf & sv", {
     field = "var1"
   )
 
-  # NOTE: Category does nothing durign the aggregation.
+  # NOTE: Category does nothing during aggregation.
 
   # Test aggregate_raster using an sf grid.
   ragg_sf <- aggregate_raster(

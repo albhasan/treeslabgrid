@@ -86,7 +86,7 @@ test_that("aggregate_geom_categ works with lines", {
     id_col = "grid_id",
     xy_min = c(x_min, y_min),
     xy_max = c(x_max, y_max),
-    n = 5,
+    n = c(5, 5),
     crs = 32723
   )
 
@@ -152,7 +152,7 @@ test_that("aggregate_geom_categ works with polygons", {
     id_col = "grid_id",
     xy_min = c(x_min, y_min),
     xy_max = c(x_max, y_max),
-    n = 5,
+    n = c(5, 5),
     crs = 32723
   )
 
@@ -587,7 +587,7 @@ test_that("aggregate_geom works with polygons", {
     id_col = "grid_id",
     xy_min = c(x_min, y_min), 
     xy_max = c(x_max, y_max),
-    n = 5,
+    n = c(5, 5),
     crs = 32723
   )
 

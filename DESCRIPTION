@@ -1,6 +1,6 @@
 Package: treeslabgrid
 Title: Create Grids and Use Them to Aggregate Data
-Version: 0.0.0.9004
+Version: 0.0.0.9005
 Authors@R: 
     person("Alber", "Sánchez", , "alber.ipia@inpe.br", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-7966-2880"))
@@ -9,12 +9,15 @@ Description: Convenience function to create regular grids and use them to
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Suggests: 
     testthat (>= 3.0.0),
-    lwgeom
+    lwgeom,
+    knitr,
+    rmarkdown
 Config/testthat/edition: 3
 Imports: 
     sf,
     terra,
     units
+VignetteBuilder: knitr

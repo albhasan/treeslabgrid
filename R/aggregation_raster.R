@@ -16,7 +16,6 @@
 #' @export
 #'
 aggregate_raster <- function(x, by, grid, grid_id, funs, ...) {
-  # Check inputs.
   if (inherits(grid, what = "sf")) {
     grid_sv <- terra::vect(grid[grid_id])
   } else if (inherits(grid, what = "SpatVector")) {
@@ -32,33 +31,43 @@ aggregate_raster <- function(x, by, grid, grid_id, funs, ...) {
         x = x,
         y = grid_sv,
         fun = f,
-        # NOTE: Comment when debugging.
-        # ... = ...,
-        ID = TRUE
+        ID = TRUE,
+        list(...)
       )
     },
-    x = x, grid_sv = grid_sv
+    x = x,
+    grid_sv = grid_sv
   )
 
   # Build new names for the columns
-  new_names <- lapply(seq(funs_ls), function(i, funs_ls, funs) {
-    colnames(funs_ls[[i]]) <-
-      paste(colnames(funs_ls[[i]][-1]), funs[i], sep = "_")
-  }, funs_ls = funs_ls, funs = funs)
+  new_names <- lapply(
+    seq(funs_ls), function(i, funs_ls, funs) {
+      colnames(funs_ls[[i]]) <-
+        paste(colnames(funs_ls[[i]][-1]), funs[i], sep = "_")
+    },
+    funs_ls = funs_ls, funs = funs
+  )
 
   # Create a data frame for holding aggregation IDs.
   id_df <- funs_ls[[1]]["ID"]
 
-  funs_ls <- lapply(seq(funs_ls), function(i, funs_ls, new_names) {
-    # Remove the ID before binding columns.
-    y <- funs_ls[[i]][-1]
-    # Update the column names on each data frame.
-    names(y) <- new_names[[i]]
-    return(y)
-  }, funs_ls = funs_ls, new_names = new_names)
+  funs_ls <- lapply(
+    seq(funs_ls), function(i, funs_ls, new_names) {
+      # Remove the ID before binding columns.
+      y <- funs_ls[[i]][-1]
+      # Update the column names on each data frame.
+      names(y) <- new_names[[i]]
+      return(y)
+    },
+    funs_ls = funs_ls,
+    new_names = new_names
+  )
 
   # Bind the aggregation data frames into one.
-  res <- do.call(what = cbind, args = funs_ls)
+  res <- do.call(
+    what = cbind,
+    args = funs_ls
+  )
   # Add the ID to the resulting data frame.
   res <- cbind(id_df, res)
 

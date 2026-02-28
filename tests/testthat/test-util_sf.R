@@ -20,7 +20,7 @@ test_that("get_geom_colname works with 2 geom columns", {
   expect_equal(res, expected = c("g1", "g2"))
 })
 
-test_that("add_centroids works", {
+test_that("add_centroids_coords works", {
 
   coords <- cbind(c(0, 30, 30, 0, 0), c(0, 0, 3, 3, 0))
   pl <- sf::st_sfc(
@@ -29,11 +29,11 @@ test_that("add_centroids works", {
   )
 
   # sfc is not sf!
-  expect_error(add_centroids(pl))
+  expect_error(add_centroids_coords(pl))
 
   data_df <- data.frame(id = 1:2, g = pl)
   data_sf <- sf::st_sf(data_df)
-  cen_sf <- add_centroids(data_sf)
+  cen_sf <- add_centroids_coords(data_sf)
 
   expect_true(inherits(cen_sf, what = "sf"))
   expect_identical(
@@ -43,7 +43,7 @@ test_that("add_centroids works", {
   expect_true(all(c("X", "Y") %in% colnames(cen_sf)))
   expect_true(all(
     c("myX", "myY") %in%
-      colnames(add_centroids(data_sf, col_names = c("myX", "myY")))
+      colnames(add_centroids_coords(data_sf, col_names = c("myX", "myY")))
   ))
   expect_true(all(
     cen_sf[["X"]] > cen_sf[["Y"]]

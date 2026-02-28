@@ -6,7 +6,7 @@
 #' `make_grid` returns a grid around spatial data (vector or raster).
 #'
 #' @param x An sf or terra object.
-#' @param n integer of lenght 1 or 2. Number of cells (columns, rows).
+#' @param n integer. Number of cells (columns, rows).
 #' @param cellsize numeric of length 1 or 2 (width, length). It defaults to the
 #'   width and heigth of the bounding box of the given object divided by the
 #'   number of cells.
@@ -30,9 +30,13 @@
 #' @examples
 #'
 #' # Make a 5x5 grid covering a polygon.
-#' pol <- sf::st_sfc(sf::st_polygon(list(cbind(c(0, 3, 3, 0, 0),
-#'                                             c(0, 0, 3, 3, 0)))),
-#'                   crs = 4326)
+#' pol <- sf::st_sfc(
+#'   sf::st_polygon(list(cbind(
+#'     c(0, 3, 3, 0, 0),
+#'     c(0, 0, 3, 3, 0)
+#'   ))),
+#'   crs = 4326
+#' )
 #' make_grid(pol, cellsize = 1, n = 5)
 #'
 #'
@@ -42,31 +46,41 @@
 #'
 #' @export
 make_grid <- function(x, n,
-                      cellsize = c(diff(sf::st_bbox(x)[c(1, 3)]),
-                                   diff(sf::st_bbox(x)[c(2, 4)])) / n,
+                      cellsize = c(
+                        diff(sf::st_bbox(x)[c(1, 3)]),
+                        diff(sf::st_bbox(x)[c(2, 4)])
+                      ) / n,
                       id_col = "id",
                       add_row_col = FALSE,
                       add_centroids = FALSE,
                       add_area = FALSE,
                       drop_area_units = FALSE) {
-
   stopifnot("Invalid n" = all(n > 0))
   stopifnot("Invalid n" = length(n) %in% 1:2)
-  stopifnot("Invalid add_row_col Expected logical(1) or character(2)" =
+  stopifnot(
+    "Invalid add_row_col Expected logical(1) or character(2)" =
       all(
         (is.logical(add_row_col) & length(add_row_col) == 1) |
           (is.character(add_row_col)) & length(add_row_col == 2)
       )
   )
-  stopifnot("Invalid add_centroids. Expected logical(1) or character(2)" =
+  stopifnot(
+    "Invalid add_centroids. Expected logical(1) or character(2)" =
       all(
         (is.logical(add_centroids) & length(add_centroids) == 1) |
           (is.character(add_centroids)) & length(add_centroids == 2)
       )
   )
 
-  if (inherits(x, what = "SpatVector"))
+  if (sf::st_is_longlat(x)) {
+    if (any(cellsize >= 180)) {
+      stop("Invalid cellsize for longitude latitude degrees!")
+    }
+  }
+
+  if (inherits(x, what = "SpatVector")) {
     x <- sf::st_as_sf(x)
+  }
 
   if (inherits(x, what = "SpatRaster")) {
     xy_mat <- matrix(as.vector(terra::ext(x)), ncol = 2, byrow = FALSE)
@@ -74,11 +88,13 @@ make_grid <- function(x, n,
     x <- sf::st_sf(sf::st_sfc(xy_line, crs = terra::crs(x)))
   }
 
-  if (is.na(sf::st_crs(x)))
+  if (is.na(sf::st_crs(x))) {
     stop("CRS is missing!")
+  }
 
-  if (min(cellsize) != max(cellsize))
+  if (min(cellsize) != max(cellsize)) {
     warning("The grid's cells aren't squares!")
+  }
 
   grid <- sf::st_make_grid(
     x,
@@ -94,9 +110,17 @@ make_grid <- function(x, n,
   colnames(data_df) <- id_col
 
   # Handle the row and column columns.
-  rc_df <- expand.grid(grid_col = 1:n[1], grid_row = seq_along(n))
-  if (all(is.logical(add_row_col), add_row_col))
+  rc_df <- expand.grid(
+    grid_col = 1:n[1],
+    grid_row = 1:ifelse(
+      test = length(n) > 1,
+      yes = n[2],
+      no = n[1]
+    )
+  )
+  if (all(is.logical(add_row_col), add_row_col)) {
     data_df <- cbind(data_df, rc_df)
+  }
   if (is.character(add_row_col)) {
     colnames(rc_df) <- c(add_row_col[2], add_row_col[1])
     data_df <- cbind(data_df, rc_df)
@@ -107,23 +131,26 @@ make_grid <- function(x, n,
   data_sf <- sf::st_sf(data_df)
 
   # Handle the centroids' columns.
-  if (all(is.logical(add_centroids), add_centroids))
-    data_sf <- add_centroids(data_sf)
-  if (is.character(add_centroids))
-    data_sf <- add_centroids(data_sf, col_names = add_centroids)
+  if (all(is.logical(add_centroids), add_centroids)) {
+    data_sf <- add_centroids_coords(data_sf)
+  }
+  if (is.character(add_centroids)) {
+    data_sf <- add_centroids_coords(data_sf, col_names = add_centroids)
+  }
 
   # Handle the area column.
-  if (all(is.logical(add_area), add_area))
+  if (all(is.logical(add_area), add_area)) {
     data_sf <- add_area(data_sf)
-  if (is.character(add_area))
+  }
+  if (is.character(add_area)) {
     data_sf <- add_area(
       x = data_sf,
       col_name = add_area,
       drop_units = drop_area_units
     )
+  }
 
   return(data_sf)
-
 }
 
 #' @rdname make_grid
@@ -141,10 +168,10 @@ make_grid <- function(x, n,
 #' # Make a grid using mininum and maximum coordinates and the number of grid
 #' # cells.
 #' make_grid_min_max_cells(
-#'     xy_min = c(-180, -90),
-#'     xy_max = c(180, 90),
-#'     n = c(14, 7),
-#'     crs = 4326
+#'   xy_min = c(-180, -90),
+#'   xy_max = c(180, 90),
+#'   n = c(14, 7),
+#'   crs = 4326
 #' )
 #'
 #' @export
@@ -153,7 +180,6 @@ make_grid_min_max_cells <- function(xy_min, xy_max, n, crs = 4326,
                                     id_col = "id", add_row_col = FALSE,
                                     add_centroids = FALSE, add_area = FALSE,
                                     drop_area_units = FALSE) {
-
   stopifnot("Invalid xy_min. A numeric is expected." = all(
     is.numeric(xy_min),
     length(xy_min) %in% 1:2
@@ -176,15 +202,14 @@ make_grid_min_max_cells <- function(xy_min, xy_max, n, crs = 4326,
     add_area = add_area,
     drop_area_units = drop_area_units
   ))
-
 }
 
 
 #' @rdname make_grid
-#' 
+#'
 #' @description
-#' `make_grid_origin_dist` returns a grid using the coordinates of an origin 
-#'  point (minimum XY), the number of cells, and the number of cells in the 
+#' `make_grid_origin_dist` returns a grid using the coordinates of an origin
+#'  point (minimum XY), the number of cells, and the number of cells in the
 #'  grid.
 #'
 #' @param cell_size A numeric of length 1 or 2. The width and heigth o a cell.
@@ -194,49 +219,49 @@ make_grid_min_max_cells <- function(xy_min, xy_max, n, crs = 4326,
 #'
 #' # Make a rectangular grid using square cells of 25 kilometers.
 #' make_grid_origin_dist(
-#'     xy_min = c(-74, 4),
-#'     n = c(14, 7),
-#'     cell_size = 25000,
-#'     crs = 3116
-#' ) 
+#'   xy_origin = c(-74, 4),
+#'   n = c(14, 7),
+#'   cell_size = 25000,
+#'   crs = 3116
+#' )
 #'
 #' @export
 #'
-make_grid_origin_dist <- function(xy_min, n, cell_size, crs, id_col = "id",
+make_grid_origin_dist <- function(xy_origin, n, cell_size, crs, id_col = "id",
                                   add_row_col = FALSE, add_centroids = FALSE,
                                   add_area = FALSE, drop_area_units = FALSE) {
+  stopifnot("Invalid xy_origin. A numeric(1 or 2) is expected." = all(
+    is.numeric(xy_origin),
+    length(xy_origin) %in% 1:2
+  ))
+  stopifnot("Invalid cell_size A numeric(1 or 2) is expected." = all(
+    is.numeric(cell_size),
+    length(cell_size) %in% 1:2
+  ))
 
-    stopifnot("Invalid xy_min. A numeric(1 or 2) is expected." = all(
-        is.numeric(xy_min),
-        length(xy_min) %in% 1:2
-    ))
-    stopifnot("Invalid cell_size A numeric(1 or 2) is expected." = all(
-        is.numeric(cell_size),
-        length(cell_size) %in% 1:2
-    ))
+  if (length(n) == 1) {
+    n <- c(n, n)
+  }
 
-    if (length(n) == 1)
-        n <- c(n, n)
-    if (length(cell_size) == 1)
-        cell_size <- c(cell_size, cell_size)
+  if (length(cell_size) == 1) {
+    cell_size <- c(cell_size, cell_size)
+  }
 
-    xy_max <- xy_min + (n * cell_size)
-    xy_mat <- matrix(c(xy_min, xy_max), ncol = 2, byrow = TRUE)
-    xy_line <- sf::st_linestring(xy_mat, dim = "XY")
-    x <- sf::st_sf(sf::st_sfc( xy_line, crs = crs))
+  xy_max <- xy_origin + (n * cell_size)
+  xy_mat <- matrix(c(xy_origin, xy_max), ncol = 2, byrow = TRUE)
+  xy_line <- sf::st_linestring(xy_mat, dim = "XY")
+  x <- sf::st_sf(sf::st_sfc(xy_line, crs = crs))
 
-    return(make_grid(
-        x,
-        n = n,
-        id_col = id_col,
-        add_row_col = add_row_col,
-        add_centroids = add_centroids,
-        add_area = add_area,
-        drop_area_units = drop_area_units
-    ))
-
+  return(make_grid(
+    x,
+    n = n,
+    id_col = id_col,
+    add_row_col = add_row_col,
+    add_centroids = add_centroids,
+    add_area = add_area,
+    drop_area_units = drop_area_units
+  ))
 }
-
 
 
 #' Build a vector from the origin approximating the minimum and maximum values
@@ -253,14 +278,15 @@ make_grid_origin_dist <- function(xy_min, n, cell_size, crs, id_col = "id",
 #' @return    A numeric.
 #'
 grid_helper <- function(o, min, max, res) {
-  sort(c(seq(from = o, to = max, by = res),
-         seq(from = o, to = min, by = -res)[-1]))
+  sort(c(
+    seq(from = o, to = max, by = res),
+    seq(from = o, to = min, by = -res)[-1]
+  ))
 }
 
 
-
 #' @rdname make_grid
-#' 
+#'
 #' @description
 #' `make_grid_origin_res` returns a grid using the coordinates of an origin
 #'  point inside an area and a cell size. The new grid will have a vertex on
@@ -272,10 +298,10 @@ grid_helper <- function(o, min, max, res) {
 #'
 #' # Make a rectangular grid using square cells of 25 kilometers.
 #' make_grid_origin_res(
-#'     xy_origin = c(-74.2, 4.4),
-#'     xy_min = c(-78, -3),
-#'     xy_max = c(-70, 5),
-#'     cell_size = 0.5
+#'   xy_origin = c(-74.2, 4.4),
+#'   xy_min = c(-78, -3),
+#'   xy_max = c(-70, 5),
+#'   cell_size = 0.5
 #' )
 #'
 #' @export
@@ -283,35 +309,45 @@ grid_helper <- function(o, min, max, res) {
 make_grid_origin_res <- function(xy_origin,
                                  xy_min,
                                  xy_max,
-                                 cell_size, 
+                                 cell_size,
                                  crs = 4326,
                                  id_col = "id") {
+  stopifnot("The origin must fall in the given ranges!" = all(
+    xy_min[1] <= xy_origin[1], xy_origin[1] <= xy_max[1],
+    xy_min[2] <= xy_origin[2], xy_origin[2] <= xy_max[2]
+  ))
+  stopifnot(
+    "`cell_sizse` is too large!" =
+      all((xy_max - xy_min) >= cell_size)
+  )
 
-    stopifnot("The origin must fall in the given ranges!" = all(
-        xy_min[1] <= xy_origin[1], xy_origin[1] <= xy_max[1],
-        xy_min[2] <= xy_origin[2], xy_origin[2] <= xy_max[2]
-    ))
-    stopifnot("`cell_sizse` is too large!" =
-              all((xy_max - xy_min) >= cell_size))
+  lon_grid <- grid_helper(
+    o = xy_origin[1], min = xy_min[1], max = xy_max[1],
+    res = cell_size
+  )
+  lat_grid <- grid_helper(
+    o = xy_origin[2], min = xy_min[2], max = xy_max[2],
+    res = cell_size
+  )
 
-    lon_grid <- grid_helper(o = xy_origin[1], min = xy_min[1], max = xy_max[1],
-                            res = cell_size)
-    lat_grid <- grid_helper(o = xy_origin[2], min = xy_min[2], max = xy_max[2],
-                            res = cell_size)
+  stopifnot(
+    "Not enough room to fit a grid!" =
+      all(length(lon_grid) > 1, length(lat_grid) > 1)
+  )
 
-    stopifnot("Not enough room to fit a grid!" = 
-        all(length(lon_grid) > 1, length(lat_grid) > 1))
+  aoi_grid <- sf::st_as_sf(sf::st_make_grid(
+    x = sf::st_bbox(
+      c(
+        xmin = min(lon_grid), xmax = max(lon_grid),
+        ymin = min(lat_grid), ymax = max(lat_grid)
+      ),
+      crs = sf::st_crs(crs)
+    ),
+    cellsize = cell_size
+  ))
+  aoi_grid[id_col] <- seq(nrow(aoi_grid))
 
-    aoi_grid <- sf::st_as_sf(sf::st_make_grid(
-        x = sf::st_bbox(c(xmin = min(lon_grid), xmax = max(lon_grid),
-            ymin = min(lat_grid), ymax = max(lat_grid)),
-            crs = sf::st_crs(crs)),
-        cellsize = cell_size
-    ))
-    aoi_grid[id_col] <- seq(nrow(aoi_grid))
-
-    return(aoi_grid)
-
+  return(aoi_grid)
 }
 
 
@@ -325,13 +361,16 @@ make_grid_origin_res <- function(xy_origin,
 #' @return a logical
 #'
 is_grid_na <- function(x) {
-    stopifnot("Expected an `sf` object!" = inherits(x, what = "sf"))
-    stopifnot("Expected polygon geometry!" = 
-        unique(sf::st_geometry_type(x)) %in% c("POLYGON", "MULTIPOLYGON"))
-    return(all(vapply(
-        X = colnames(sf::st_drop_geometry(x)),
-        FUN = function(v, x) {all(is.na(x[[v]]))},
-        FUN.VALUE = logical(1), x = x
-    )))
+  stopifnot("Expected an `sf` object!" = inherits(x, what = "sf"))
+  stopifnot(
+    "Expected polygon geometry!" =
+      unique(sf::st_geometry_type(x)) %in% c("POLYGON", "MULTIPOLYGON")
+  )
+  return(all(vapply(
+    X = colnames(sf::st_drop_geometry(x)),
+    FUN = function(v, x) {
+      all(is.na(x[[v]]))
+    },
+    FUN.VALUE = logical(1), x = x
+  )))
 }
-

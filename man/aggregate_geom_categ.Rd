@@ -7,7 +7,8 @@
 aggregate_geom_categ(categ, data_sf_ls, grid, grid_id, funs, ...)
 }
 \arguments{
-\item{categ}{a character(1). Name of a category in the elements of \code{data_sf_ls}.}
+\item{categ}{a character(1). Name of a category in the elements of
+\code{data_sf_ls}.}
 
 \item{data_sf_ls}{a list of sf objects. The data in this list is meant to be
 aggregated using the given \code{grid}.}

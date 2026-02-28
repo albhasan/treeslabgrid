@@ -12,6 +12,7 @@ test_that("make_grid works with sf objects", {
   expect_warning(make_grid(pl, n = c(5, 21)))
 
   # Test invalid n.
+  expect_error(make_grid(pl))
   expect_error(make_grid(pl, n = integer()))
   expect_error(make_grid(pl, n = c(5, 5, 5)))
   expect_error(make_grid(pl, n = c(5, 5, 5, 5)))
@@ -68,6 +69,98 @@ test_that("make_grid works with sf objects", {
 
 })
 
+
+test_that("make_grid works with real vector data", {
+
+  pl <- sf::st_read(
+    fname <- system.file("shape/nc.shp", package = "sf"),
+    quiet = TRUE
+  )
+  pl <- sf::st_make_valid(pl)
+
+  # Expect a warning when the grid's cells aren't squares.
+  expect_warning(make_grid(pl, n = c(5, 21)))
+
+  # Test invalid n.
+  expect_error(make_grid(pl))
+  expect_error(make_grid(pl, n = integer()))
+  expect_error(make_grid(pl, n = c(5, 5, 5)))
+  expect_error(make_grid(pl, n = c(5, 5, 5, 5)))
+
+  # Test the number of cells versus the rows x columns.
+  n_cells <- rep(5, times = 2)
+  grid <- suppressWarnings(make_grid(pl, n = n_cells))
+  expect_equal(nrow(grid), expected = prod(n_cells))
+
+  # Expect error: Cellsize is too large for geographic coordinates.
+  expect_error(make_grid(pl, n = 2, cellsize = 1e3))
+
+  # Test the cells' ids.
+  n <- c(5, 7)
+  grid <- make_grid(pl, n = c(5, 7), add_row_col = TRUE, cellsize = 1)
+  expect_true(all(1:n[1] %in% unique(grid[["grid_col"]])))
+  expect_true(all(1:n[2] %in% unique(grid[["grid_row"]])))
+
+  # Test grid's columns.
+  expect_true("id" %in% colnames(make_grid(pl, n = 2, cellsize = 1)))
+  expect_true("my_id" %in% colnames(make_grid(pl, n = 2, id_col = "my_id",
+                                              cellsize = 1)))
+  expect_true(all(
+    c("grid_row", "grid_col") %in%
+      colnames(suppressWarnings(make_grid(pl, n = 2, add_row_col = TRUE)))
+  ))
+  expect_true(all(
+    c("grid_row", "grid_col") %in%
+      colnames(make_grid(pl, n = 2, add_row_col = TRUE, cellsize = 1))
+  ))
+  expect_true(all(
+    c("myid1", "myid2") %in%
+      colnames(make_grid(pl, n = 2, add_row_col = c("myid1", "myid2"),
+                         cellsize = 1))
+  ))
+  expect_true(all(
+    c("myid1", "myid2", "myid3") %in%
+      colnames(make_grid(
+        pl, n = 2, id_col = "myid1",
+        add_row_col = c("myid2", "myid3"),
+        cellsize = 1
+      ))
+  ))
+  expect_true(all(
+    c("X", "Y") %in% colnames(make_grid(pl, n = 2, add_centroids = TRUE,
+                                        cellsize = 1))
+  ))
+  expect_true(all(
+    c("myx", "myy") %in%
+      colnames(make_grid(
+        pl, n = 2,
+        add_centroids = c("myx", "myy"),
+        cellsize = 1
+      ))
+  ))
+  expect_true(all(
+    c("myid1", "myid2", "myid3", "myid4", "myid5") %in%
+      colnames(make_grid(
+        pl, n = 2, id_col = "myid1",
+        add_row_col = c("myid2", "myid3"),
+        add_centroids = c("myid4", "myid5"),
+        cellsize = 1
+      ))
+  ))
+  expect_true(all(
+    ".area" %in% colnames(make_grid(pl, n = 2, add_area = TRUE,
+                                    cellsize = 1))
+  ))
+  expect_true(all(
+    "myarea" %in% colnames(make_grid(pl, n = 2, add_area = "myarea",
+                                     cellsize = 1))
+  ))
+
+})
+
+
+
+
 test_simple_grid <- function(grid) {
 
   expect_true(inherits(grid, what = "sf"))
@@ -123,7 +216,7 @@ test_that("make_grid_min_max_cells works", {
 test_that("make_grid_origin_dist works", {
 
   grid <- make_grid_origin_dist(
-    xy_min = c(0, 0),
+    xy_origin = c(0, 0),
     n = c(7, 14),
     cell_size = 0.25,
     crs = 4326
@@ -136,7 +229,7 @@ test_that("make_grid_origin_dist works", {
 
 test_that("make_grid_origin_res works", {
 
-  # TOOD: test the default name of the id column.
+  # TODO: test the default name of the id column.
   xy_origin <- c(-74.2, 4.4)
   xy_min <- c(-78, -3)
   xy_max <- c(-70, 5)
