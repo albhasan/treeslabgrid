@@ -71,24 +71,32 @@ aggregate_geom_categ <- function(categ, data_sf_ls, grid, grid_id, funs, ...) {
   # Aggregate spatial attributes.
   dg_df <- sf::st_drop_geometry(dg_inter)
 
-  funs_ls <- lapply(funs, function(f, dg_df, cnames, grid_id) {
-    data_df <- stats::aggregate(
-      x = dg_df[cnames],
-      by = dg_df[grid_id],
-      FUN = f,
-      # NOTE: Comment the ellipsis when debugging.
-      ... = ...
-    )
-    names(data_df) <- vapply(names(data_df),
-      FUN = function(n, f) {
-        if (n == grid_id) {
-          return(n)
-        }
-        return(paste0(f, n))
-      }, FUN.VALUE = character(1), f = f
-    )
-    return(data_df)
-  }, dg_df = dg_df, cnames = cnames, grid_id = grid_id)
+  funs_ls <- lapply(
+    X = funs,
+    FUN = function(f, dg_df, cnames, grid_id) {
+      data_df <- stats::aggregate(
+        x = dg_df[cnames],
+        by = dg_df[grid_id],
+        FUN = f,
+        ...
+      )
+      names(data_df) <- vapply(
+        X = names(data_df),
+        FUN = function(n, f) {
+          if (n == grid_id) {
+            return(n)
+          }
+          return(paste0(f, n))
+        },
+        FUN.VALUE = character(1),
+        f = f
+      )
+      return(data_df)
+    },
+    dg_df = dg_df,
+    cnames = cnames,
+    grid_id = grid_id
+  )
   if (is.character(funs)) {
     names(funs_ls) <- funs
   }
@@ -149,21 +157,34 @@ aggregate_geom <- function(x, by, grid, grid_id, funs, ...) {
     grid = grid,
     grid_id = grid_id,
     funs = funs,
-    # NOTE: Comment the ellipsis when debugging.
-    ... = ...
+    ...
   )
 
   # Merge inner and then then outer lists.
-  m_categ_ls <- lapply(categ_ls, function(categ_df, grid_id) {
-    return(merge_data_frames(
-      data_frames = categ_df,
-      by = grid_id
-    ))
-  }, grid_id = grid_id)
-  data_df <- merge_data_frames(data_frames = m_categ_ls, by = grid_id)
+  m_categ_ls <- lapply(
+    X = categ_ls,
+    FUN = function(categ_df, grid_id) {
+      return(
+        merge_data_frames(
+          data_frames = categ_df,
+          by = grid_id
+        )
+      )
+    },
+    grid_id = grid_id
+  )
+  data_df <- merge_data_frames(
+    data_frames = m_categ_ls,
+    by = grid_id
+  )
 
   return(
-    merge(grid, data_df, by = grid_id, all = TRUE)
+    merge(
+      x = grid,
+      y = data_df,
+      by = grid_id,
+      all = TRUE
+    )
   )
 }
 
@@ -212,38 +233,58 @@ aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
   data_sf_ls <- split(x = x[!colnames(x) %in% by], f = x[[by]], drop = TRUE)
 
   # Apply list of functions to list of data frames.
-  categ_ls <- lapply(data_sf_ls, function(data_sf, funs, grid) {
-    # Spatially aggregate each data frame using function f.
-    data_f_ls <- lapply(funs, function(f, data_sf, grid) {
-      agg_df <- stats::aggregate(
-        x = data_sf,
-        by = grid,
-        FUN = f,
-        # NOTE: Commnet the ellipsis when debugging!
-        ... = ...,
-        do_union = TRUE,
-        simplify = TRUE,
-        join = sf::st_intersects
+  categ_ls <- lapply(
+    X = data_sf_ls,
+    FUN = function(data_sf, funs, grid) {
+      # Spatially aggregate each data frame using function f.
+      data_f_ls <- lapply(
+        X = funs,
+        FUN = function(f, data_sf, grid) {
+          agg_df <- stats::aggregate(
+            x = data_sf,
+            by = grid,
+            FUN = f,
+            ...,
+            do_union = TRUE,
+            simplify = TRUE,
+            join = sf::st_intersects
+          )
+          return(agg_df)
+        },
+        data_sf = data_sf,
+        grid = grid
       )
-      return(agg_df)
-    }, data_sf = data_sf, grid = grid)
-    names(data_f_ls) <- funs
-    return(data_f_ls)
-  }, funs = funs, grid = grid)
+      names(data_f_ls) <- funs
+      return(data_f_ls)
+    },
+    funs = funs,
+    grid = grid
+  )
 
   # Remove geometry column.
   # Format column names with function name and category.
-  data_ls <- lapply(names(categ_ls), function(categ, categ_ls) {
-    fun_ls <- categ_ls[[categ]]
-    lapply(names(fun_ls), function(fun, fun_ls, categ) {
-      data_df <- sf::st_drop_geometry(fun_ls[[fun]])
-      colnames(data_df) <- paste(fun,
-        colnames(sf::st_drop_geometry(data_df)), categ,
-        sep = "."
+  data_ls <- lapply(
+    X = names(categ_ls),
+    FUN = function(categ, categ_ls) {
+      fun_ls <- categ_ls[[categ]]
+      lapply(
+        X = names(fun_ls),
+        FUN = function(fun, fun_ls, categ) {
+          data_df <- sf::st_drop_geometry(fun_ls[[fun]])
+          colnames(data_df) <- paste(
+            fun,
+            colnames(sf::st_drop_geometry(data_df)),
+            categ,
+            sep = "."
+          )
+          return(data_df)
+        },
+        fun_ls = fun_ls,
+        categ = categ
       )
-      return(data_df)
-    }, fun_ls = fun_ls, categ = categ)
-  }, categ_ls = categ_ls)
+    },
+    categ_ls = categ_ls
+  )
 
   # Unnest data frames.
   data_ls <- lapply(data_ls, function(data_df) {
@@ -259,8 +300,7 @@ aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
     grid = grid,
     grid_id = grid_id,
     funs = funs,
-    # NOTE: Commnet the ellipsis when debugging!
-    ... = ...
+    ...
   )
 
   # Column bind spatial grid to aggregated data.
