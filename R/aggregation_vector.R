@@ -23,6 +23,8 @@ aggregate_geom_categ <- function(categ, data_sf_ls, grid, grid_id, funs, ...) {
       categ %in% names(data_sf_ls)
   )
 
+  ellipsis::check_dots_used()
+
   data_sf <- data_sf_ls[[categ]]
 
   grid_agr <- sf::st_agr(grid)
@@ -135,9 +137,9 @@ aggregate_geom <- function(x, by, grid, grid_id, funs, ...) {
     "`funs` must be a character!" =
       is.character(funs)
   )
-  stopifnot("`x` is not an sf object!" = inherits(x, what = "sf"))
+  stopifnot("`x` is not an sf object!" = inherits(x = x, what = "sf"))
+  stopifnot("`grid` is not an sf object!" = inherits(x = grid, what = "sf"))
   stopifnot("!Invalid sf object!" = sf::st_is_valid(x))
-  stopifnot("`grid` is not an sf object!" = inherits(grid, what = "sf"))
   stopifnot("!Invalid grid (sf object)!" = sf::st_is_valid(grid))
   stopifnot("Empty sf object!" = nrow(x) > 0)
   stopifnot("Empty grid!" = nrow(grid) > 0)
@@ -203,11 +205,12 @@ aggregate_geom <- function(x, by, grid, grid_id, funs, ...) {
 #'  corresponding to each cell in `grid`.
 #' @param ... additional parameters passed to funs.
 #'
-#' @return `grid` with additional columns.
+#' @return `grid` (sf) with additional columns.
 #'
 #' @export
 #'
 aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
+  # Validate inputs.
   stopifnot("`funs` should be a character!" = all(is.character(funs)))
   stopifnot(
     "`grid_id` should be a character!" =
@@ -217,10 +220,18 @@ aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
     "`by` should be a character!" =
       all(is.character(by), length(by) == 1)
   )
+  if (inherits(x = x, what = "SpatVector")) {
+    x <- sf::st_as_sf(x)
+  }
+  if (inherits(x = grid, what = "SpatVector")) {
+    grid <- sf::st_as_sf(grid)
+  }
   stopifnot("!Invalid sf object!" = sf::st_is_valid(x))
   stopifnot("!Invalid grid (sf object)!" = sf::st_is_valid(grid))
-  stopifnot("Empty sf object!" = nrow(x) > 0)
+  stopifnot("Empty object x!" = nrow(x) > 0)
   stopifnot("Empty grid!" = nrow(grid) > 0)
+
+
   x_df <- sf::st_drop_geometry(x)
   x_df <- x_df[colnames(x_df) != by]
   stopifnot(
@@ -239,7 +250,8 @@ aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
       # Spatially aggregate each data frame using function f.
       data_f_ls <- lapply(
         X = funs,
-        FUN = function(f, data_sf, grid) {
+        FUN = function(f, data_sf, grid, ...) {
+          ellipsis::check_dots_used()
           agg_df <- stats::aggregate(
             x = data_sf,
             by = grid,
@@ -252,7 +264,8 @@ aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
           return(agg_df)
         },
         data_sf = data_sf,
-        grid = grid
+        grid = grid,
+        ...
       )
       names(data_f_ls) <- funs
       return(data_f_ls)

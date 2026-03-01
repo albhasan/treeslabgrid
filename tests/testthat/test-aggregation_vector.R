@@ -1,5 +1,4 @@
 test_that("aggregate_geom_categ works with points", {
-
   x_min <- -10
   y_min <- -5
   x_max <- 10
@@ -18,8 +17,12 @@ test_that("aggregate_geom_categ works with points", {
   n_points <- 5
   categs <- "categ_1"
   points_sf <- sf::st_sf(data.frame(
-    category = sample(categs, size = n_points, replace = TRUE),
-    geom = list(sf::st_sample(grid, size = n_points))
+    category = sample(
+      x = categs,
+      size = n_points,
+      replace = TRUE
+    ),
+    geom = list(sf::st_sample(x = grid, size = n_points))
   ))
 
   data_sf_ls <- list(points_sf)
@@ -32,9 +35,12 @@ test_that("aggregate_geom_categ works with points", {
     funs = "sum"
   )
 
-  expect_equal(length(res), expected = length(categs))
   expect_equal(
-    sum(res[[1]][["sum.n.categ_1"]]),
+    object = length(res),
+    expected = length(categs)
+  )
+  expect_equal(
+    object = sum(res[[1]][["sum.n.categ_1"]]),
     expected = nrow(points_sf)
   )
 
@@ -64,18 +70,18 @@ test_that("aggregate_geom_categ works with points", {
     funs = funs
   )
   expect_true(all(res[["mean.n.categ_1"]] == 1))
-  expect_equal(length(res), expected = length(funs))
   expect_equal(
-    sum(res[[2]][["sum.n.categ_1"]]),
+    object = length(res),
+    expected = length(funs)
+  )
+  expect_equal(
+    object = sum(res[[2]][["sum.n.categ_1"]]),
     expected = nrow(points_sf)
   )
-
 })
 
 
-
 test_that("aggregate_geom_categ works with lines", {
-
   x_min <- 412090
   y_min <- 7433005
   x_max <- x_min + 130
@@ -92,20 +98,36 @@ test_that("aggregate_geom_categ works with lines", {
 
   # Create lines.
   ls_1 <- sf::st_linestring(
-    matrix(c(412092.92, 7433082.79, 412143.87, 7433133.493), byrow = TRUE,
-           ncol = 2), dim = "XY"
+    matrix(
+      data = c(412092.92, 7433082.79, 412143.87, 7433133.493),
+      byrow = TRUE,
+      ncol = 2
+    ),
+    dim = "XY"
   )
   ls_2 <- sf::st_linestring(
-    matrix(c(412143.87, 7433133.493, 412218.449, 7433059.477),
-           byrow = TRUE, ncol = 2), dim = "XY"
+    matrix(
+      data = c(412143.87, 7433133.493, 412218.449, 7433059.477),
+      byrow = TRUE,
+      ncol = 2
+    ),
+    dim = "XY"
   )
   ls_3 <- sf::st_linestring(
-    matrix(c(412218.449, 7433059.477, 412167.573, 7433008.878),
-           byrow = TRUE, ncol = 2), dim = "XY"
+    matrix(
+      data = c(412218.449, 7433059.477, 412167.573, 7433008.878),
+      byrow = TRUE,
+      ncol = 2
+    ),
+    dim = "XY"
   )
   ls_4 <- sf::st_linestring(
-    matrix(c(412167.573, 7433008.878, 412092.92, 7433082.79),
-           byrow = TRUE, ncol = 2), dim = "XY"
+    matrix(
+      data = c(412167.573, 7433008.878, 412092.92, 7433082.79),
+      byrow = TRUE,
+      ncol = 2
+    ),
+    dim = "XY"
   )
   lines_sfc <- sf::st_sfc(
     list(ls_1, ls_2, ls_3, ls_4),
@@ -128,20 +150,17 @@ test_that("aggregate_geom_categ works with lines", {
   )
 
   expect_equal(
-    sum(res[[1]][["sum.length.A"]]),
+    object = sum(res[[1]][["sum.length.A"]]),
     expected = sum(sf::st_length(lines_sf))
   )
   expect_equal(
-    res[[1]][["sum.n.A"]],
+    object = res[[1]][["sum.n.A"]],
     expected = c(2, 1, 1, 1, 1, 1, 2, 1, 2, 1, 1, 1, 1, 1, 2, 1)
   )
-
 })
 
 
-
 test_that("aggregate_geom_categ works with polygons", {
-
   x_min <- 412090
   y_min <- 7433005
   x_max <- x_min + 130
@@ -159,11 +178,13 @@ test_that("aggregate_geom_categ works with polygons", {
   # Create lines.
   pol_1 <- sf::st_polygon(
     list(matrix(
-      c(412092.92,  7433082.79,
-        412143.87,  7433133.493,
+      data = c(
+        412092.92, 7433082.79,
+        412143.87, 7433133.493,
         412218.449, 7433059.477,
         412167.573, 7433008.878,
-        412092.92,  7433082.79),
+        412092.92, 7433082.79
+      ),
       byrow = TRUE,
       ncol = 2
     )),
@@ -190,17 +211,14 @@ test_that("aggregate_geom_categ works with polygons", {
   )
 
   expect_equal(
-    sum(res[[1]][["sum.area.A"]]),
+    object = sum(res[[1]][["sum.area.A"]]),
     expected = sf::st_area(pol_sf)
   )
   expect_true(all(res[[1]][["sum.n.A"]] == 1))
-
 })
 
 
-
 test_that("aggregate_vector works with points", {
-
   # Create a new grid.
   grid <- make_grid_min_max_cells(
     id_col = "grid_id",
@@ -217,22 +235,29 @@ test_that("aggregate_vector works with points", {
   # Create random points.
   n_points <- 100
   points_sf <- sf::st_sf(data.frame(
-    category = sample(categs, size = n_points, replace = TRUE),
+    category = sample(x = categs, size = n_points, replace = TRUE),
     geom = list(sf::st_sample(grid, size = n_points))
   ))
   for (v in names(vars)) {
-    if (vars[v] == "integer")
-      points_sf[v] <- sample(1:10, size = n_points, replace = TRUE)
-    if (vars[v] == "double")
+    if (vars[v] == "integer") {
+      points_sf[v] <- sample(x = 1:10, size = n_points, replace = TRUE)
+    }
+    if (vars[v] == "double") {
       points_sf[v] <- 20 * rnorm(n = n_points)
+    }
   }
 
   # Test error when non-numeric columns are given (besides `by`).
   points_e <- points_sf
   points_e["char_col"] <- rep("e", times = nrow(points_e))
-  expect_error(agg_sf <- aggregate_vector(x = points_e, by = "category",
-                                          grid = grid, grid_id = "grid_id",
-                                          funs = funs, na.rm = TRUE))
+  expect_error(agg_sf <- aggregate_vector(
+    x = points_e,
+    by = "category",
+    grid = grid,
+    grid_id = "grid_id",
+    funs = funs,
+    na.rm = TRUE
+  ))
 
   # Do aggregate.
   agg_sf <- aggregate_vector(
@@ -245,11 +270,11 @@ test_that("aggregate_vector works with points", {
   )
 
   # The resulting sf object must have the same number of rows as the grid.
-  expect_equal(nrow(agg_sf), expected = nrow(grid))
+  expect_equal(object = nrow(agg_sf), expected = nrow(grid))
 
   # The resulting sf object must have a column for each combination of
   # categories, variables, and aggregation functions.
-  n_col_att  <- length(funs) * length(vars) * length(categs)
+  n_col_att <- length(funs) * length(vars) * length(categs)
   n_col_geom <- length(funs) * length(categs)
   expect_equal(
     ncol(sf::st_drop_geometry(agg_sf)),
@@ -312,13 +337,10 @@ test_that("aggregate_vector works with points", {
     sum(colSums(sf::st_drop_geometry(agg_sf)[cnames], na.rm = TRUE)),
     expected = nrow(points_sf)
   )
-
 })
 
 
-
 test_that("aggregate_vector works with lines", {
-
   categs <- tolower(LETTERS[13:15])
   funs <- sort(c("sum", "mean", "sd", "min", "max"))
   n_lines <- 100
@@ -350,10 +372,12 @@ test_that("aggregate_vector works with lines", {
     geom = sf::st_sfc(lin_ls, crs = 4326)
   ))
   for (v in names(vars)) {
-    if (vars[v] == "integer")
+    if (vars[v] == "integer") {
       lines_sf[v] <- sample(1:11, size = n_lines, replace = TRUE)
-    if (vars[v] == "double")
+    }
+    if (vars[v] == "double") {
       lines_sf[v] <- 7 * rnorm(n = n_lines)
+    }
   }
 
   # Aggregate lines.
@@ -371,7 +395,7 @@ test_that("aggregate_vector works with lines", {
   expect_equal(nrow(agg_df), expected = nrow(grid))
 
   # Test number of columns.
-  ncol_att  <- length(categs) * length(vars) * length(funs)
+  ncol_att <- length(categs) * length(vars) * length(funs)
   ncol_geom <- length(categs) * length(funs) * 2
   expect_equal(
     ncol(sf::st_drop_geometry(agg_sf)),
@@ -398,13 +422,10 @@ test_that("aggregate_vector works with lines", {
     agg_len,
     expected = units::drop_units(sum(sf::st_length(lines_sf)))
   )
-
 })
 
 
-
 test_that("aggregate_vector works with polygons", {
-
   x_min <- -50
   y_min <- -25
   x_max <- 40
@@ -429,17 +450,22 @@ test_that("aggregate_vector works with polygons", {
     )
   )
   polygons_sf[["pol_id"]] <- NULL
-  polygons_sf <- polygons_sf[sample(nrow(polygons_sf),
-                                    size = floor(nrow(polygons_sf) / 2)), ]
+  polygons_sf <- polygons_sf[
+    sample(
+      x = nrow(polygons_sf),
+      size = floor(nrow(polygons_sf) / 2)
+    ),
+  ]
 
   categs <- tolower(letters[24:26])
   funs <- sort(c("sum", "mean", "sd", "min", "max"))
 
   polygons_sf <-
-    cbind(polygons_sf,
+    cbind(
+      polygons_sf,
       data.frame(
-        category = sample(categs, size = nrow(polygons_sf), replace = TRUE),
-        trees = sample(7, size = nrow(polygons_sf), replace = TRUE),
+        category = sample(x = categs, size = nrow(polygons_sf), replace = TRUE),
+        trees = sample(x = 7, size = nrow(polygons_sf), replace = TRUE),
         temperature = 20 * rnorm(n = nrow(polygons_sf))
       )
     )
@@ -454,19 +480,16 @@ test_that("aggregate_vector works with polygons", {
 
   # Test number of columns.
   vars <- c("trees", "temperature")
-  ncol_att  <- length(funs) * length(vars) * length(categs)
+  ncol_att <- length(funs) * length(vars) * length(categs)
   ncol_geom <- length(categs) * length(funs) * 2
   expect_equal(
-    ncol(sf::st_drop_geometry(agg_sf)),
+    object = ncol(sf::st_drop_geometry(agg_sf)),
     expected = ncol_att + ncol_geom + 1
   )
-
 })
 
 
-
 test_that("aggregate_geom works with points", {
-
   x_min <- -10
   y_min <- -5
   x_max <- 10
@@ -485,7 +508,7 @@ test_that("aggregate_geom works with points", {
   n_points <- 5
   categs <- LETTERS[1:n_points]
   points_sf <- sf::st_sf(data.frame(
-    category = sample(categs, size = n_points, replace = FALSE),
+    category = sample(x = categs, size = n_points, replace = FALSE),
     geom = list(sf::st_sample(grid, size = n_points))
   ))
 
@@ -497,30 +520,30 @@ test_that("aggregate_geom works with points", {
     funs = "sum"
   )
 
-  expect_equal(nrow(agg_points), expected = nrow(grid))
   expect_equal(
-    sum(sf::st_drop_geometry(agg_points)[-1], na.rm = TRUE),
+    object = nrow(agg_points),
+    expected = nrow(grid)
+  )
+  expect_equal(
+    object = sum(sf::st_drop_geometry(agg_points)[-1], na.rm = TRUE),
     expected = nrow(points_sf)
   )
   expect_equal(
-    ncol(sf::st_drop_geometry(agg_points)[-1]),
+    object = ncol(sf::st_drop_geometry(agg_points)[-1]),
     expected = length(categs)
   )
   expect_true(
     all(vapply(
-      sf::st_drop_geometry(agg_points)[-1],
-      sum,
-      numeric(1),
+      X = sf::st_drop_geometry(agg_points)[-1],
+      FUN = sum,
+      FUN.VALUE = numeric(1),
       na.rm = TRUE
     ) == 1)
   )
-
 })
 
 
-
 test_that("aggregate_geom works with lines", {
-
   x_min <- -10
   y_min <- -5
   x_max <- 10
@@ -542,12 +565,26 @@ test_that("aggregate_geom works with lines", {
   line_vertex <- 1 + sample.int(n = 10, size = n_lines, replace = TRUE)
   neg_buffer <- 0.1
   lin_ls <- lapply(line_vertex, function(x) {
-    lon <- sample(seq(x_min + neg_buffer, x_max - neg_buffer, 0.1),
-                  size = x)
-    lat <- sample(seq(y_min + neg_buffer, y_max - neg_buffer, 0.1),
-                  size = x)
-    sf::st_linestring(matrix(c(lon, lat), byrow = FALSE, ncol = 2),
-                      dim = "XY")
+    lon <- sample(
+      x = seq(
+        from = x_min + neg_buffer,
+        to = x_max - neg_buffer,
+        by = 0.1
+      ),
+      size = x
+    )
+    lat <- sample(
+      x = seq(
+        from = y_min + neg_buffer,
+        to = y_max - neg_buffer,
+        by = 0.1
+      ),
+      size = x
+    )
+    sf::st_linestring(
+      x = matrix(data = c(lon, lat), byrow = FALSE, ncol = 2),
+      dim = "XY"
+    )
   })
   lines_sf <- sf::st_sf(data.frame(
     category = sample(categs, size = n_lines, replace = TRUE),
@@ -563,20 +600,20 @@ test_that("aggregate_geom works with lines", {
   )
 
   # Test against the number of elements in the grid.
-  expect_equal(nrow(agg_lines), expected = nrow(grid))
+  expect_equal(
+    object = nrow(agg_lines),
+    expected = nrow(grid)
+  )
 
   # Test the total length of the lines.
   res <- sum(sf::st_drop_geometry(agg_lines)[-1], na.rm = TRUE)
   expt <- sum(units::drop_units(sf::st_length(lines_sf)))
   tol <- .Machine$double.eps^0.3
   expect_true(abs(res - expt) / expt < tol)
-
 })
 
 
-
 test_that("aggregate_geom works with polygons", {
-
   x_min <- 412090
   y_min <- 7433005
   x_max <- x_min + 130
@@ -585,7 +622,7 @@ test_that("aggregate_geom works with polygons", {
   # Create a grid.
   grid <- make_grid_min_max_cells(
     id_col = "grid_id",
-    xy_min = c(x_min, y_min), 
+    xy_min = c(x_min, y_min),
     xy_max = c(x_max, y_max),
     n = c(5, 5),
     crs = 32723
@@ -594,16 +631,19 @@ test_that("aggregate_geom works with polygons", {
   # Create lines.
   pol_1 <- sf::st_polygon(
     list(
-         matrix(
-                c(
-                  412092.92,  7433082.79,
-                  412143.87,  7433133.493,
-                  412218.449, 7433059.477,
-                  412167.573, 7433008.878,
-                  412092.92,  7433082.79
-                ),
-                byrow = TRUE,
-                ncol = 2)), dim = "XY"
+      matrix(
+        data = c(
+          412092.92,  7433082.79,
+          412143.87,  7433133.493,
+          412218.449, 7433059.477,
+          412167.573, 7433008.878,
+          412092.92,  7433082.79
+        ),
+        byrow = TRUE,
+        ncol = 2
+      )
+    ),
+    dim = "XY"
   )
   pol_sfc <- sf::st_sfc(
     list(pol_1),
@@ -611,7 +651,7 @@ test_that("aggregate_geom works with polygons", {
     dim = "XY"
   )
   pol_sf <- sf::st_sf(data.frame(
-    category = rep("A", times = 1),
+    category = rep(x = "A", times = 1),
     geom = pol_sfc
   ))
 
@@ -627,15 +667,73 @@ test_that("aggregate_geom works with polygons", {
   )
 
   expect_equal(
-    sum(res[["sum.area.A"]], na.rm = TRUE),
+    object = sum(res[["sum.area.A"]], na.rm = TRUE),
     expected = sf::st_area(pol_sf)
   )
 
   expect_equal(
-    res[["sum.n.A"]],
+    object = res[["sum.n.A"]],
     expected = c(
-                 NA, NA, 1, 1, NA, NA, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                 1, NA, 1, 1, 1, NA)
+      NA, NA, 1, 1, NA, NA, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+      1, NA, 1, 1, 1, NA
+    )
+  )
+})
+
+
+test_that("aggregate_geom works with point values using only one category", {
+  # Create a raster.
+  r <- terra::rast(
+    nrows = 40,
+    ncols = 20,
+    xmin = 0,
+    xmax = 10,
+    ymin = 0,
+    ymax = 10
+  )
+  terra::values(r) <- runif(terra::ncell(r))
+  terra::crs(r) <- "EPSG:4326"
+
+  # Create an aggregation grid.
+  # Avoid warning regarding non-square cells in grid.
+  suppressWarnings(
+    grid <- make_grid(
+      x = r,
+      n = c(17, 11)
+    )
   )
 
+  # Cast the raster to points.
+  r_df <- as.data.frame(
+    x = r,
+    xy = TRUE
+  )
+  r_sf <- sf::st_as_sf(
+    x = r_df,
+    coords = c("x", "y"),
+    crs = terra::crs(r)
+  )
+
+  # Aggregate the points.
+  r_sf["dummy_raster_by"] <- 1
+  res <- aggregate_vector(
+    x = r_sf,
+    by = "dummy_raster_by",
+    grid = grid,
+    grid_id = colnames(grid)[1],
+    funs = "sum",
+    na.rm = TRUE
+  )
+
+  # The sum of aggregated points must match the original numer of points.
+  expect_equal(
+    object = sum(res[["sum.n.1"]]),
+    expected = nrow(r_sf)
+  )
+
+  # The sum of the attribute values must match after aggregation.
+  expect_equal(
+    object = sum(res[["sum.lyr.1.1"]]),
+    expected = sum(r_sf[["lyr.1"]])
+  )
 })

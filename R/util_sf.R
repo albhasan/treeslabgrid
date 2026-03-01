@@ -7,6 +7,8 @@
 #'
 #' @return  A character.
 #'
+#' @export
+#'
 get_geom_colname <- function(x) {
   stopifnot(
     "An sf object was expected!" =
@@ -74,7 +76,6 @@ add_area <- function(x, col_name = ".area", drop_units = FALSE) {
 }
 
 
-
 #' Add length
 #'
 #' @description
@@ -107,7 +108,6 @@ add_length <- function(x, col_name = ".length", drop_units = FALSE) {
 }
 
 
-
 #' Simplify geometries
 #'
 #' @description
@@ -128,13 +128,13 @@ simplify_geoms <- function(data_sf, geom_types = NA) {
 
   if (all(is.na(geom_types))) {
     if (sf::st_geometry_type(data_sf, by_geometry = FALSE) %in%
-          c("POINT", "MULTIPOINT")) {
+      c("POINT", "MULTIPOINT")) {
       geom_types <- c("POINT", "MULTIPOINT")
     } else if (sf::st_geometry_type(data_sf, by_geometry = FALSE) %in%
-                 c("LINESTRING", "MULTILINESTRING")) {
+      c("LINESTRING", "MULTILINESTRING")) {
       geom_types <- c("LINESTRING", "MULTILINESTRING")
     } else if (sf::st_geometry_type(data_sf, by_geometry = FALSE) %in%
-                 c("POLYGON", "MULTIPOLYGON")) {
+      c("POLYGON", "MULTIPOLYGON")) {
       geom_types <- c("POLYGON", "MULTIPOLYGON")
     } else {
       stop("Unknown geometry type!")
@@ -159,4 +159,139 @@ simplify_geoms <- function(data_sf, geom_types = NA) {
   }
 
   return(dg_sf)
+}
+
+
+#' Get center coordinates
+#'
+#' @description
+#' Get the coordinates of the center of the extent of the given  object (sf or
+#' terra).
+#'
+#' @param x an sf or terra object.
+#'
+#' @return a named vector.
+#'
+#' @export
+#'
+get_center <- function(x) {
+  # Helper. Estimate center coordinates of sf's extent object.
+  get_bbox_center <- function(bb) {
+    return(c(
+      x = as.vector(bb["xmin"] + ((bb["xmax"] - bb["xmin"]) / 2)),
+      y = as.vector(bb["ymin"] + ((bb["ymax"] - bb["ymin"]) / 2))
+    ))
+  }
+
+  # Helper. Estimate center coordinates of terra's extent object.
+  get_spat_extent_center <- function(se) {
+    se <- as.vector(se)
+    return(c(
+      x = as.vector(se["xmin"] + ((se["xmax"] - se["xmin"]) / 2)),
+      y = as.vector(se["ymin"] + ((se["ymax"] - se["ymin"]) / 2))
+    ))
+  }
+
+  if (inherits(x = x, what = "sf")) {
+    bb <- sf::st_bbox(x)
+    return(get_bbox_center(bb))
+  } else if (inherits(x = x, what = "bbox")) {
+    return(get_bbox_center(x))
+  } else if (inherits(x = x, what = "SpatRaster")) {
+    bb <- terra::ext(x)
+    return(get_spat_extent_center(bb))
+  } else if (inherits(x = x, what = "SpatExtent")) {
+    return(get_spat_extent_center(x))
+  }
+  stop("Unsupported data type!")
+}
+
+
+#' Get minimum coordinates
+#'
+#' @description
+#' Get the mininum coordinates of the extent of the given  object (sf or
+#' terra).
+#'
+#' @param x an sf or terra object.
+#'
+#' @return a named vector.
+#'
+#' @export
+#'
+get_min <- function(x) {
+  # Helper. Estimate minimum coordinates of sf's extent object.
+  get_bbox_min <- function(bb) {
+    return(c(
+      xmin = as.vector(bb["xmin"]),
+      ymin = as.vector(bb["ymin"])
+    ))
+  }
+
+  # Helper. Estimate minimum coordinates of terra's extent object.
+  get_spat_extent_min <- function(se) {
+    se <- as.vector(se)
+    return(c(
+      xmin = as.vector(se["xmin"]),
+      ymin = as.vector(se["ymin"])
+    ))
+  }
+
+  if (inherits(x = x, what = "sf")) {
+    bb <- sf::st_bbox(x)
+    return(get_bbox_min(bb))
+  } else if (inherits(x = x, what = "bbox")) {
+    return(get_bbox_min(x))
+  } else if (inherits(x = x, what = "SpatRaster")) {
+    bb <- terra::ext(x)
+    return(get_spat_extent_min(bb))
+  } else if (inherits(x = x, what = "SpatExtent")) {
+    return(get_spat_extent_min(x))
+  }
+  stop("Unsupported data type!")
+}
+
+
+#' Get maximum coordinates
+#'
+#' @description
+#' Get the maximum coordinates of the extent of the given  object (sf or
+#' terra).
+#'
+#' @param x an sf or terra object.
+#'
+#' @return a named vector.
+#'
+#' @export
+#'
+get_max <- function(x) {
+  # Helper. Estimate maximum coordinates of sf's extent object.
+  get_bbox_max <- function(bb) {
+    return(c(
+      xmax = as.vector(bb["xmax"]),
+      ymax = as.vector(bb["ymax"])
+    ))
+  }
+
+  # Helper. Estimate maximum coordinates of terra's extent object.
+  get_spat_extent_max <- function(se) {
+    se <- as.vector(se)
+    return(c(
+      xmax = as.vector(se["xmax"]),
+      ymax = as.vector(se["ymax"])
+    ))
+  }
+
+  if (inherits(x = x, what = "sf")) {
+    bb <- sf::st_bbox(x)
+    return(get_bbox_max(bb))
+  } else if (inherits(x = x, what = "bbox")) {
+    return(get_bbox_max(x))
+  } else if (inherits(x = x, what = "SpatRaster")) {
+    bb <- terra::ext(x)
+    return(get_spat_extent_max(bb))
+  } else if (inherits(x = x, what = "SpatExtent")) {
+    return(get_spat_extent_max(x))
+  }
+  stop("Unsupported data type!")
 }

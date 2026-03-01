@@ -22,7 +22,7 @@ corresponding to each cell in \code{grid}.}
 \item{...}{additional parameters passed to funs.}
 }
 \value{
-\code{grid} with additional columns.
+\code{grid} (sf) with additional columns.
 }
 \description{
 Aggregate vector data (points, lines, polygons) and their attributes using

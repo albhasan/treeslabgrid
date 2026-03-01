@@ -9,7 +9,7 @@ aggregate_raster(x, by, grid, grid_id, funs, ...)
 \arguments{
 \item{x}{a terra object.}
 
-\item{by}{ignored parameter.}
+\item{by}{a character(1). A column name in \code{x}.}
 
 \item{grid}{A grid (polygons) used to aggregate \code{x}.}
 
@@ -22,7 +22,7 @@ corresponding to each cell in \code{grid}.}
 \item{...}{additional parameters passed to funs.}
 }
 \value{
-\code{grid} with additional columns.
+\code{grid} (sf) with additional columns.
 }
 \description{
 Aggregate raster data using simple statistics and a grid (vector).

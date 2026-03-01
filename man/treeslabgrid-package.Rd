@@ -8,6 +8,13 @@
 \description{
 Convenience function to create regular grids and use them to aggregate geographic (vector or raster) data.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://albhasan.github.io/treeslabgrid/}
+}
+
+}
 \author{
 \strong{Maintainer}: Alber Sánchez \email{alber.ipia@inpe.br} (\href{https://orcid.org/0000-0001-7966-2880}{ORCID})
 

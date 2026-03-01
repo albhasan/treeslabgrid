@@ -8,20 +8,18 @@ test_that("get_geom_colname works", {
   res <- get_geom_colname(s)
   expect_equal(length(res), expected = 1)
   expect_equal(res, expected = "g")
-
 })
 
 test_that("get_geom_colname works with 2 geom columns", {
   g1 <- sf::st_sfc(sf::st_point(1:2))
   g2 <- sf::st_sfc(sf::st_point(3:4))
-  s  <- sf::st_sf(a = 3, g1, g2)
+  s <- sf::st_sf(a = 3, g1, g2)
   res <- get_geom_colname(s)
   expect_equal(length(res), expected = 2)
   expect_equal(res, expected = c("g1", "g2"))
 })
 
 test_that("add_centroids_coords works", {
-
   coords <- cbind(c(0, 30, 30, 0, 0), c(0, 0, 3, 3, 0))
   pl <- sf::st_sfc(
     sf::st_polygon(list(coords)),
@@ -48,11 +46,9 @@ test_that("add_centroids_coords works", {
   expect_true(all(
     cen_sf[["X"]] > cen_sf[["Y"]]
   ))
-
 })
 
 test_that("add_area works", {
-
   coords <- cbind(c(0, 1, 1, 0, 0), c(0, 0, 1, 1, 0))
   pl <- sf::st_sfc(
     sf::st_polygon(list(coords))
@@ -64,7 +60,8 @@ test_that("add_area works", {
   expect_equal(data_sf[[".area"]], 1)
   expect_true(".area" %in% colnames(data_sf))
   expect_true("myarea" %in% colnames(add_area(sf::st_sf(data_df),
-                                              col_name = "myarea")))
+    col_name = "myarea"
+  )))
   expect_true(inherits(data_sf[[".area"]], what = "numeric"))
 
   pl <- sf::st_sfc(
@@ -77,13 +74,10 @@ test_that("add_area works", {
 
   data_sf <- add_area(sf::st_sf(data_df), drop_units = TRUE)
   expect_true(inherits(data_sf[[".area"]], what = "numeric"))
-
 })
 
 
-
 test_that("add_length works", {
-
   n_lines <- 10
   n_vertex <- sample(2:20, size = n_lines, replace = TRUE)
   g <- sf::st_sfc(
@@ -94,17 +88,21 @@ test_that("add_length works", {
     }),
     crs = 4326
   )
-  g_sf <- sf::st_sf(gid <- 1: n_lines, geomety = g)
+  g_sf <- sf::st_sf(gid <- 1:n_lines, geomety = g)
   data_sf <- add_length(g_sf)
 
   expect_true(inherits(data_sf, what = "sf"))
   expect_equal(sum(data_sf[[".length"]]), sum(sf::st_length(data_sf)))
   expect_true(".length" %in% colnames(data_sf))
   expect_true("mylen" %in% colnames(add_length(sf::st_sf(data_sf),
-                                               col_name = "mylen")))
+    col_name = "mylen"
+  )))
   expect_true(inherits(data_sf[[".length"]], what = "units"))
 
   data_sf <- add_length(g_sf, drop_units = TRUE)
   expect_true(inherits(data_sf[[".length"]], what = "numeric"))
-
 })
+
+test_that("get_center works", {})
+test_that("get_min works", {})
+test_that("get_max works", {})

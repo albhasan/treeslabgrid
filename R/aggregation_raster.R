@@ -3,7 +3,7 @@
 #' Aggregate raster data using simple statistics and a grid (vector).
 #'
 #' @param x a terra object.
-#' @param by ignored parameter.
+#' @param by a character(1). A column name in `x`.
 #' @param grid A grid (polygons) used to aggregate `x`.
 #' @param grid_id a character(1). A column name in `grid` with an unique
 #'   identifier for each row.
@@ -11,86 +11,32 @@
 #'  corresponding to each cell in `grid`.
 #' @param ... additional parameters passed to funs.
 #'
-#' @return `grid` with additional columns.
+#' @return `grid` (sf) with additional columns.
 #'
 #' @export
 #'
 aggregate_raster <- function(x, by, grid, grid_id, funs, ...) {
-  if (inherits(grid, what = "sf")) {
-    grid_sv <- terra::vect(grid[grid_id])
-  } else if (inherits(grid, what = "SpatVector")) {
-    grid_sv <- grid[grid_id]
-  } else {
-    stop("The grid must be either an sf or SpatVector object.")
-  }
-
-  # Aggregate the given raster using the grid and aggregation functions.
-  funs_ls <- lapply(funs,
-    function(f, x, grid_sv) {
-      terra::extract(
-        x = x,
-        y = grid_sv,
-        fun = f,
-        ID = TRUE,
-        list(...)
-      )
-    },
+  # Cast the raster to points.
+  x_df <- as.data.frame(
     x = x,
-    grid_sv = grid_sv
+    xy = TRUE
   )
-
-  # Build new names for the columns
-  new_names <- lapply(
-    seq(funs_ls), function(i, funs_ls, funs) {
-      colnames(funs_ls[[i]]) <-
-        paste(colnames(funs_ls[[i]][-1]), funs[i], sep = "_")
-    },
-    funs_ls = funs_ls, funs = funs
+  x_sf <- sf::st_as_sf(
+    x = x_df,
+    coords = c("x", "y"),
+    crs = terra::crs(x)
   )
-
-  # Create a data frame for holding aggregation IDs.
-  id_df <- funs_ls[[1]]["ID"]
-
-  funs_ls <- lapply(
-    seq(funs_ls), function(i, funs_ls, new_names) {
-      # Remove the ID before binding columns.
-      y <- funs_ls[[i]][-1]
-      # Update the column names on each data frame.
-      names(y) <- new_names[[i]]
-      return(y)
-    },
-    funs_ls = funs_ls,
-    new_names = new_names
+  # Aggregate the points.
+  x_sf["dummy_raster_by"] <- 1
+  res <- aggregate_vector(
+    x = x_sf,
+    by = "dummy_raster_by",
+    grid = grid,
+    grid_id = grid_id,
+    funs = funs,
+    ...
   )
-
-  # Bind the aggregation data frames into one.
-  res <- do.call(
-    what = cbind,
-    args = funs_ls
-  )
-  # Add the ID to the resulting data frame.
-  res <- cbind(id_df, res)
-
-  # Bind the grid to the results.
-  if (inherits(grid, what = "sf")) {
-    grid_res <- merge(
-      x = grid,
-      y = res,
-      by.x = grid_id,
-      by.y = "ID"
-    )
-  } else if (inherits(grid, what = "SpatVector")) {
-    grid_res <- terra::merge(
-      x = grid_sv,
-      y = res,
-      by.x = grid_id,
-      by.y = "ID"
-    )
-  } else {
-    stop("Unknown object type!")
-  }
-
-  return(grid_res)
+  return(res)
 }
 
 # TODO: Add fast point aggregation from:
