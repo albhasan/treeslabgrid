@@ -6,7 +6,10 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of treeslabgrid is to …
+The goal of `treeslabgrid` is to help users to aggregate spatial data
+using regular grids. To achieve this, `treeslabgrid` extends the `sf`
+and `terra` packages, providing additional functions to create grids and
+aggregate data using many aggregation functions simultaneously.
 
 ## Installation
 
@@ -20,33 +23,86 @@ pak::pak("albhasan/treeslabgrid")
 
 ## Example
 
-This is a basic example which shows you how to solve a common problem:
+This is a basic example which shows you how to create a grid and use it
+to aggregate a raster.
+
+First, let’s load some packages:
 
 ``` r
 library(treeslabgrid)
-## basic example code
+library(sf)
+#> Linking to GEOS 3.13.1, GDAL 3.10.3, PROJ 9.6.0; sf_use_s2() is TRUE
+library(terra)
+#> terra 1.8.93
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+Now, let’s get a raster from the examples in the `terra` package:
 
 ``` r
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
+# Get a raster.
+r <- rast(system.file("ex/meuse.tif", package = "terra"))
 ```
 
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this.
+`treeslabgrid` offers many ways to create a grid that covers spatial
+data. In our example, we can center our grid in the middle of the
+raster’s extent:
 
-You can also embed plots, for example:
+``` r
+# Create a grid over that covers the raster.
+g <- make_grid_origin_res(
+  xy_origin = get_center(r),
+  xy_min = get_min(r),
+  xy_max = get_max(r),
+  cell_size = 500,
+  crs = terra::crs(r),
+  id_col = "grid_id"
+)
+```
 
-<img src="man/figures/README-pressure-1.png" alt="" width="100%" />
+We can plot what we just did:
 
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub and CRAN.
+``` r
+plot(r, reset = FALSE)
+plot(st_cast(g[get_geom_colname(g)], "LINESTRING"), add = TRUE)
+```
+
+<img src="man/figures/README-plot_grid_over_raster-1.png" alt="" width="100%" />
+The grid seems OK; so, we can now aggregate the raster data using it:
+
+``` r
+meuse_agg <- aggregate_raster(
+  x = r,
+  by = NA_character_,
+  grid = g,
+  grid_id = "grid_id",
+  funs = c("sum", "min", "mean", "max"),
+  na.rm = TRUE
+)
+```
+
+Note we use many aggregation functions at the same time, so, the results
+present the results for each one:
+
+``` r
+plot(meuse_agg["sum.meuse.1"])
+```
+
+<img src="man/figures/README-aggregate_meuse_plot_sum-1.png" alt="" width="100%" />
+
+``` r
+plot(meuse_agg["min.meuse.1"])
+```
+
+<img src="man/figures/README-aggregate_meuse_plot_sum-2.png" alt="" width="100%" />
+
+``` r
+plot(meuse_agg["mean.meuse.1"])
+```
+
+<img src="man/figures/README-aggregate_meuse_plot_sum-3.png" alt="" width="100%" />
+
+``` r
+plot(meuse_agg["max.meuse.1"])
+```
+
+<img src="man/figures/README-aggregate_meuse_plot_sum-4.png" alt="" width="100%" />
