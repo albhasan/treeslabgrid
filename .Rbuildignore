@@ -1,2 +1,14 @@
 ^treeslabgrid\.Rproj$
 ^\.Rproj\.user$
+
+tags
+
+^LICENSE\.md$
+^\.github$
+^README\.Rmd$
+^doc$
+^Meta$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^codecov\.yml$

@@ -1,0 +1,323 @@
+#' Aggregate geometries by category
+#'
+#' @description
+#' Helper function called from `aggregate_geom`.
+#'
+#' @param categ a character(1). Name of a category in the elements of
+#' `data_sf_ls`.
+#' @param data_sf_ls a list of sf objects. The data in this list is meant to be
+#'   aggregated using the given `grid`.
+#' @param grid an sf object (polygons). Grid used to aggregate data.
+#' @param grid_id a character(1). Name of a column in `grid` that identifies
+#'   each cell in `grid`.
+#' @param funs a character. Name of aggregation functions.
+#' @param ... parameters passed to funs.
+#'
+#' @return a list of data frames with the results of the aggrgation of the
+#'   spatial attributes of the data in `data_sf_ls` using `grid`.
+#'
+aggregate_geom_categ <- function(categ, data_sf_ls, grid, grid_id, funs, ...) {
+  stopifnot("`data_sf_ls` must have names!" = !is.null(names(data_sf_ls)))
+  stopifnot(
+    "`categ` not found in `data_sf_ls`" =
+      categ %in% names(data_sf_ls)
+  )
+
+  ellipsis::check_dots_used()
+
+  data_sf <- data_sf_ls[[categ]]
+
+  grid_agr <- sf::st_agr(grid)
+  data_agr <- sf::st_agr(data_sf)
+  sf::st_agr(grid) <- "constant"
+  sf::st_agr(data_sf) <- "constant"
+  dg_inter <- sf::st_intersection(data_sf, grid)
+  sf::st_agr(grid) <- grid_agr
+  sf::st_agr(data_sf) <- data_agr
+
+  if (
+    any(
+      sf::st_geometry_type(data_sf, by_geometry = FALSE)
+      %in% c("POINT", "MULTIPOINT")
+    )
+  ) {
+    gtype <- sf::st_geometry_type(dg_inter, by_geometry = TRUE) %in%
+      c("POINT", "MULTIPOINT", "GEOMETRYCOLLECTION")
+    dg_inter <- dg_inter[gtype, ]
+    cnames <- paste0(".n.", categ)
+    dg_inter[cnames] <- 1
+  } else if (any(
+    sf::st_geometry_type(data_sf, by_geometry = TRUE) %in%
+      c("LINESTRING", "MULTILINESTRING")
+  )) {
+    gtype <- sf::st_geometry_type(dg_inter, by_geometry = TRUE) %in%
+      c("LINESTRING", "MULTILINESTRING", "GEOMETRYCOLLECTION")
+    dg_inter <- dg_inter[gtype, ]
+    cnames <- paste0(c(".n.", ".length."), categ)
+    dg_inter[cnames[1]] <- 1
+    dg_inter <- add_length(dg_inter, col_name = cnames[2])
+  } else if (any(
+    sf::st_geometry_type(data_sf, by_geometry = TRUE) %in%
+      c("POLYGON", "MULTIPOLYGON")
+  )) {
+    gtype <- sf::st_geometry_type(dg_inter, by_geometry = TRUE) %in%
+      c("POLYGON", "MULTIPOLYGON", "GEOMETRYCOLLECTION")
+    dg_inter <- dg_inter[gtype, ]
+    cnames <- paste0(c(".n.", ".area."), categ)
+    dg_inter[cnames[1]] <- 1
+    dg_inter <- add_area(dg_inter, col_name = cnames[2])
+  } else {
+    stop("Unknown geometry type!")
+  }
+
+  # Aggregate spatial attributes.
+  dg_df <- sf::st_drop_geometry(dg_inter)
+
+  funs_ls <- lapply(
+    X = funs,
+    FUN = function(f, dg_df, cnames, grid_id) {
+      data_df <- stats::aggregate(
+        x = dg_df[cnames],
+        by = dg_df[grid_id],
+        FUN = f,
+        ...
+      )
+      names(data_df) <- vapply(
+        X = names(data_df),
+        FUN = function(n, f) {
+          if (n == grid_id) {
+            return(n)
+          }
+          return(paste0(f, n))
+        },
+        FUN.VALUE = character(1),
+        f = f
+      )
+      return(data_df)
+    },
+    dg_df = dg_df,
+    cnames = cnames,
+    grid_id = grid_id
+  )
+  if (is.character(funs)) {
+    names(funs_ls) <- funs
+  }
+
+  return(funs_ls)
+}
+
+
+#' Aggregate vector data using a grid
+#'
+#' @description
+#' This function estimates the geometric properties (number, length, and area)
+#' resulting from the intersection of the given vector data and a grid.
+#'
+#' @param x an sf object.
+#' @param by a character(1). A column name in `x`.
+#' @param grid an sf object (polygon). A grid used for aggregating `x`.
+#' @param grid_id a character(1). A column name in `grid` with identifiers for
+#'   each cell in `grid`.
+#' @param funs a character. Name of funcions for aggregating the data in `x`
+#'   that intersects with each cell in `grid`.
+#' @param ... additional parameters of `funs`.
+#'
+#' @return `grid` with additional attributes.
+#'
+aggregate_geom <- function(x, by, grid, grid_id, funs, ...) {
+  stopifnot(
+    "`grid_id` should be a character!" =
+      all(is.character(grid_id), length(grid_id) == 1)
+  )
+  stopifnot(
+    "`by` should be a character!" =
+      all(is.character(by), length(by) == 1)
+  )
+  stopifnot(
+    "`funs` must be a character!" =
+      is.character(funs)
+  )
+  stopifnot("`x` is not an sf object!" = inherits(x = x, what = "sf"))
+  stopifnot("`grid` is not an sf object!" = inherits(x = grid, what = "sf"))
+  stopifnot("!Invalid sf object!" = sf::st_is_valid(x))
+  stopifnot("!Invalid grid (sf object)!" = sf::st_is_valid(grid))
+  stopifnot("Empty sf object!" = nrow(x) > 0)
+  stopifnot("Empty grid!" = nrow(grid) > 0)
+  stopifnot(
+    "`grid_id` must be a column in grid!" =
+      grid_id %in% colnames(grid)
+  )
+
+  # Split data into data frames by `by` attribute.
+  data_sf_ls <- split(x = x[!colnames(x) %in% by], f = x[[by]], drop = TRUE)
+  # cnames <- character(0)
+
+  categ_ls <- lapply(
+    X = names(data_sf_ls),
+    FUN = aggregate_geom_categ,
+    data_sf_ls = data_sf_ls,
+    grid = grid,
+    grid_id = grid_id,
+    funs = funs,
+    ...
+  )
+
+  # Merge inner and then then outer lists.
+  m_categ_ls <- lapply(
+    X = categ_ls,
+    FUN = function(categ_df, grid_id) {
+      return(
+        merge_data_frames(
+          data_frames = categ_df,
+          by = grid_id
+        )
+      )
+    },
+    grid_id = grid_id
+  )
+  data_df <- merge_data_frames(
+    data_frames = m_categ_ls,
+    by = grid_id
+  )
+
+  return(
+    merge(
+      x = grid,
+      y = data_df,
+      by = grid_id,
+      all = TRUE
+    )
+  )
+}
+
+
+#' Aggregate vector data
+#'
+#' Aggregate vector data (points, lines, polygons) and their attributes using
+#' simple statistics, a grid, and the data categories.
+#'
+#' @param x an sf object.
+#' @param by a character(1). A column name in `x` with a category for each row.
+#' @param grid and sf object (polygon). A grid used to aggregate `x`.
+#' @param grid_id a character(1). A column name in `grid` with an unique
+#'   identifier for each row.
+#' @param funs a character. Functions names used to aggregate the data in `x`
+#'  corresponding to each cell in `grid`.
+#' @param ... additional parameters passed to funs.
+#'
+#' @return `grid` (sf) with additional columns.
+#'
+#' @export
+#'
+aggregate_vector <- function(x, by, grid, grid_id, funs, ...) {
+  # Validate inputs.
+  stopifnot("`funs` should be a character!" = all(is.character(funs)))
+  stopifnot(
+    "`grid_id` should be a character!" =
+      all(is.character(grid_id), length(grid_id) == 1)
+  )
+  stopifnot(
+    "`by` should be a character!" =
+      all(is.character(by), length(by) == 1)
+  )
+  if (inherits(x = x, what = "SpatVector")) {
+    x <- sf::st_as_sf(x)
+  }
+  if (inherits(x = grid, what = "SpatVector")) {
+    grid <- sf::st_as_sf(grid)
+  }
+  stopifnot("!Invalid sf object!" = sf::st_is_valid(x))
+  stopifnot("!Invalid grid (sf object)!" = sf::st_is_valid(grid))
+  stopifnot("Empty object x!" = nrow(x) > 0)
+  stopifnot("Empty grid!" = nrow(grid) > 0)
+
+
+  x_df <- sf::st_drop_geometry(x)
+  x_df <- x_df[colnames(x_df) != by]
+  stopifnot(
+    "Only numeric columns allowed in `x`! (besides `by`)" =
+      all(vapply(x_df, is.numeric, logical(1)))
+  )
+  rm(x_df)
+
+  # Split data into data frames by `by` attribute.
+  data_sf_ls <- split(x = x[!colnames(x) %in% by], f = x[[by]], drop = TRUE)
+
+  # Apply list of functions to list of data frames.
+  categ_ls <- lapply(
+    X = data_sf_ls,
+    FUN = function(data_sf, funs, grid) {
+      # Spatially aggregate each data frame using function f.
+      data_f_ls <- lapply(
+        X = funs,
+        FUN = function(f, data_sf, grid, ...) {
+          ellipsis::check_dots_used()
+          agg_df <- stats::aggregate(
+            x = data_sf,
+            by = grid,
+            FUN = f,
+            ...,
+            do_union = TRUE,
+            simplify = TRUE,
+            join = sf::st_intersects
+          )
+          return(agg_df)
+        },
+        data_sf = data_sf,
+        grid = grid,
+        ...
+      )
+      names(data_f_ls) <- funs
+      return(data_f_ls)
+    },
+    funs = funs,
+    grid = grid
+  )
+
+  # Remove geometry column.
+  # Format column names with function name and category.
+  data_ls <- lapply(
+    X = names(categ_ls),
+    FUN = function(categ, categ_ls) {
+      fun_ls <- categ_ls[[categ]]
+      lapply(
+        X = names(fun_ls),
+        FUN = function(fun, fun_ls, categ) {
+          data_df <- sf::st_drop_geometry(fun_ls[[fun]])
+          colnames(data_df) <- paste(
+            fun,
+            colnames(sf::st_drop_geometry(data_df)),
+            categ,
+            sep = "."
+          )
+          return(data_df)
+        },
+        fun_ls = fun_ls,
+        categ = categ
+      )
+    },
+    categ_ls = categ_ls
+  )
+
+  # Unnest data frames.
+  data_ls <- lapply(data_ls, function(data_df) {
+    do.call("cbind", data_df)
+  })
+  data_df <- do.call("cbind", data_ls)
+  data_df <- data_df[sort(colnames(data_df))]
+
+  # Aggregate spatial properties.
+  geom_sf <- aggregate_geom(
+    x = x,
+    by = by,
+    grid = grid,
+    grid_id = grid_id,
+    funs = funs,
+    ...
+  )
+
+  # Column bind spatial grid to aggregated data.
+  grid <- cbind(geom_sf, data_df)
+
+  return(grid)
+}

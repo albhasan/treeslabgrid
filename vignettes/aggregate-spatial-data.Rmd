@@ -1,0 +1,89 @@
+---
+title: "aggregate-spatial-data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{aggregate-spatial-data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+
+Besides building grids, this package includes functions for aggregating spatial
+data. To start, let's load some packages:
+
+```{r setup}
+library(sf)
+library(terra)
+library(treeslabgrid)
+```
+
+Now let's get some raster data and throw a grid over it:
+
+```{r get_data}
+r <- rast(system.file("ex/meuse.tif", package = "terra"))
+g <- make_grid_origin_res(
+  xy_origin = get_center(r),
+  xy_min = get_min(r),
+  xy_max = get_max(r),
+  cell_size = 500,
+  crs = terra::crs(r),
+  id_col = "grid_id"
+)
+```
+Note the use of the functions `get_center`, `get_min`, and `get_max` to get the
+extent coordinates of objects (`sf` or `terra`).
+
+Now plot, just to make sure the grid makes sense:
+
+```{r plot_r_grid}
+plot(r, reset = FALSE)
+plot(st_cast(g[get_geom_colname(g)], "LINESTRING"), add = TRUE)
+```
+
+Now we can use this grid to aggregate the data it covers:
+
+```{r aggregate_meuse}
+meuse_agg <- aggregate_raster(
+  x = r,
+  by = NA_character_,
+  grid = g,
+  grid_id = "grid_id",
+  funs = c("sum", "min", "mean", "max"),
+  na.rm = TRUE
+)
+```
+
+Just a note about how the column names are built in the results:
+
+```{r aggregate_meuse_coords}
+colnames(meuse_agg)
+```
+
+Besides the identifier of each cell in the grid (`grid_id`), we have columns
+for the combination of each aggregation function (`funs`), the input raster
+(`meuse`), and each category (we didn't include one in our example).
+The names of the column in the results are build in the same order, separated
+by points.
+The exception is `n`, which correspond to the number of raster cells included
+in each cell of the aggregation grid.
+
+Now, we can, for example, plot the total value in each cell of the aggregation
+grid:
+
+```{r aggregate_meuse_plot_sum}
+plot(meuse_agg["sum.meuse.1"])
+```
+
+Or the mean value:
+
+```{r aggregate_meuse_plot_mean}
+plot(meuse_agg["mean.meuse.1"])
+```
